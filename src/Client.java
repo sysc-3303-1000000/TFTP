@@ -51,7 +51,7 @@ public class Client {
 		writeMsg = writeRqst();
 		invMsg = invRqst();
 		
-		System.out.println("edited2");
+		System.out.println("edited4");
 		
 	}
 	
