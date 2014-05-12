@@ -26,14 +26,13 @@ public class Client {
 	byte filenameBytes[], modeBytes[];
 	
 	// create a 0, 1, and 2 byte
-	byte zero = (byte)0;
-	byte one = (byte)1;
-	byte two = (byte)2;
+	final byte zero = (byte)0;
+	final byte one = (byte)1;
+	final byte two = (byte)2;
 	
 	// the messages that will be sent are stored in these variables 
 	static byte readMsg[];
 	static byte writeMsg[];
-	static byte invMsg[];
 	
 	// default constructor for Intermediate class 
 	public Client(){
@@ -49,7 +48,6 @@ public class Client {
 		// initialize the messages
 		readMsg = readRqst();
 		writeMsg = writeRqst();
-		invMsg = invRqst();
 		
 		System.out.println("edited4");
 		
@@ -77,11 +75,6 @@ public class Client {
 	 * This procedure will create the invalid request
 	 * @return a byte array with an invalid message
 	 */
-	private byte[] invRqst(){
-		
-		return 	createMsg(zero, filenameBytes, modeBytes);
-	}
-	
 	// send and receive procedure for the packet
 	// this procedure will also be able to accept a request depending on its arguments
 	/**
@@ -167,57 +160,36 @@ public class Client {
 	 */
 	private byte[] createMsg(byte rqstByte, byte file[], byte mode[]) {
 		// the message will be of size 4 (0, rqstByte, 0, 0) with the file length and mode length
-		byte msg[] = new byte[4+file.length+mode.length];
-		msg[0] = zero;
-		msg[1] = rqstByte;
 		
-		// will keep track of the index of the file and mode we're in
-		int byteCount = 0;
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		
-		// keeps track of the index of the message
-		int msgIndex = 2;
+		outputStream.write( (byte)0 );
+		outputStream.write( rqstByte );
+		outputStream.write( file, 0, file.length );
+		outputStream.write( (byte)0 );
+		outputStream.write( mode, 0, mode.length );
+		outputStream.write( (byte)0 );
 		
-		// add the file bytes starting at index 2
-		for (int i = 0; i<file.length; i++) {
-			msg[msgIndex] = file[byteCount];
-			byteCount++;
-			msgIndex++;
+		byte[] message = outputStream.toByteArray();
+		
+		return message;
+		
+	}
+	
+	private void run(){
+		for (int i = 0; i < 4; i++) {
+			sendReceive(readMsg);
+			sendReceive(writeMsg);
 		}
-		
-		// add a 0 at index position 
-		msg[(msgIndex)] = zero;
-		// increase the index
-		msgIndex++;
-		
-		// reset the byteCount to 0 to begin adding the bytes for the mode 
-		byteCount = 0;
-		// add the mode bytes starting at the msgIndex
-		for (int i = 0; i<mode.length; i++) {
-			msg[msgIndex] = mode[byteCount];
-			byteCount++;
-			msgIndex++;		
-		}
-		
-		// add the final 0 in the message
-		msg[msgIndex] = zero;
-		
-		return msg;
 	}
 	
 	// our main program
 	public static void main(String[] args) {
 		Client client = new Client();
 		
-		// start with an invalid request 
-		client.sendReceive(invMsg);
-		
+		client.run();
 		// repeat the read and write requests 4 times, alternating
-		for (int i = 0; i < 4; i++) {
-		client.sendReceive(readMsg);
-		client.sendReceive(writeMsg);
-		}
 		
-		// have an invalid request sent
-		client.sendReceive(invMsg);
+		
 	}
 }
