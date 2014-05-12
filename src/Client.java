@@ -161,8 +161,10 @@ public class Client {
 	private byte[] createMsg(byte rqstByte, byte file[], byte mode[]) {
 		// the message will be of size 4 (0, rqstByte, 0, 0) with the file length and mode length
 		
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		//Create a byte array output stream
 		
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		//write bytes to outputstream
 		outputStream.write( (byte)0 );
 		outputStream.write( rqstByte );
 		outputStream.write( file, 0, file.length );
