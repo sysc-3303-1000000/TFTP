@@ -21,7 +21,7 @@ public class Listener extends Thread {
 	
 	/**
 	 * The following is the constructor for Listener
-	 * @param v whether verbose mode is enabled
+	 * @param verbose whether verbose mode is enabled
 	 * 
 	 * @since May 13 2014
 	 * 
@@ -30,9 +30,9 @@ public class Listener extends Thread {
 	 * @author Kais
 	 * 
 	 */
-	public Listener(boolean v) {
+	public Listener(boolean verbose) {
 		data = new byte[DATA_SIZE];
-		verbose = v;
+		this.verbose = verbose;
 		
 		try { // initialize the socket to a well known port
 			receive = new DatagramSocket(69);
@@ -72,6 +72,7 @@ public class Listener extends Thread {
 	 */
 	private void verify(DatagramPacket p) {
 		// TODO implement how verification is done
+		// TODO spawn new thread ConnectionManager which will deal with the rest of the things the server has to do
 	} // end method
 	
 	/**
@@ -104,8 +105,6 @@ public class Listener extends Thread {
 				printPacketInfo(receivedata);
 
 			verify(receivedata);
-			
-			// TODO spawn new thread ConnectionManager which will deal with the rest of the things the server has to do
 			
 		} // end forloop
 	} // end method
