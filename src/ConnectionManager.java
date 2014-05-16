@@ -13,28 +13,30 @@ import java.net.*;
  */
 public class ConnectionManager extends Thread {
 	private DatagramSocket send;
-	private DatagramPacket senddata;
+	private DatagramPacket sendData;
 	private boolean verbose;
 	private int port;
 	private Request req;
+	private DatagramPacket receivedPacket;
 	
 	/**
 	 * The following is the constructor for ConnectionManager
 	 * @param verbose whether verbose mode is enabled
-	 * @param port the port which the acknowledge will be sent to
+	 * @param p DatagramPacket received by Listener
 	 * @param req the type of request
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: Added constructor code to initialize the socket
-	 * @version May 13 2014
-	 * @author Kais
+	 * Latest Change: Taking in DatagramPacket instead of port
+	 * @version May 15 2014
+	 * @author Colin
 	 * 
 	 */
-	public ConnectionManager(boolean verbose, int port, Request req) {
+	public ConnectionManager(boolean verbose, DatagramPacket p, Request r) {
 		this.verbose = verbose;
-		this.port = port;
-		this.req = req;
+		this.port = p.getPort();
+		this.req = r;
+		this.receivedPacket = p;
 		
 		try { // initialize the socket
 			send = new DatagramSocket();
@@ -50,12 +52,35 @@ public class ConnectionManager extends Thread {
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: First revision, added basic implementation. Basic skeleton.
+	 * Latest Change: Add format error checking
 	 * @version May 13 2014
-	 * @author Kais
+	 * @author Colin
 	 * 
 	 */
 	public void run() {
+		
+		boolean error = false;
+		int innerzero = 0;
+
+		boolean found = false;
+		for (int i = 2; i < receivedPacket.getLength() - 1; i++) {
+			if (receivedPacket.getData()[i] == (byte) 0) {
+				if (!found)
+					innerzero = i;
+				else
+					error = true;
+			}
+		}
+		if (receivedPacket.getData()[receivedPacket.getLength()] != (byte) 0)
+			error = true;
+		
+		if(error){
+			// TODO send error
+		}
+
+		if (innerzero == 2 || innerzero == 0)
+			error = true;
+
 		if (req == Request.WRITE) {
 			// TODO write to file
 			// TODO Form acknowledge
