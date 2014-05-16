@@ -65,14 +65,25 @@ public class Listener extends Thread {
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: Added function definition, no implementation done
-	 * @version May 13 2014
-	 * @author Kais
+	 * Latest Change: Calls ConnectionManager thread and verifies read or write
+	 * @version May 15 2014
+	 * @author Colin
 	 * 
 	 */
 	private void verify(DatagramPacket p) {
-		// TODO implement how verification is done
-		// TODO spawn new thread ConnectionManager which will deal with the rest of the things the server has to do
+		Request r;
+		if(p.getData()[0] != (byte)0)
+			System.exit(1);
+		if(p.getData()[1] == (byte)1)
+			r = Request.READ;
+		else if(p.getData()[1] == (byte)2)
+			r = Request.WRITE;
+		else{
+			System.exit(1);
+			return;
+		}
+		ConnectionManager newConnectionThread = new ConnectionManager(verbose, p, r);
+		newConnectionThread.start();
 	} // end method
 	
 	/**
