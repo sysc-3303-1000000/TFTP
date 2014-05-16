@@ -73,13 +73,13 @@ public class Listener extends Thread {
 	private void verify(DatagramPacket p) {
 		Request r;
 		if(p.getData()[0] != (byte)0)
-			System.exit(1);
+			System.exit(1); // TODO properly handle error
 		if(p.getData()[1] == (byte)1)
 			r = Request.READ;
 		else if(p.getData()[1] == (byte)2)
 			r = Request.WRITE;
 		else{
-			System.exit(1);
+			System.exit(1); // TODO properly handle error
 			return;
 		}
 		ConnectionManager newConnectionThread = new ConnectionManager(verbose, p, r);
