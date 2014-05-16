@@ -1,42 +1,48 @@
-/**
- * SYSC 3303 - ASSIGNMENT 1
- * 
- * @author Mohammed Ahmed-Muhsin
- * @version 2.0 
- * The client will be creating and sending a DatagramPacket with either a read request or a write request
- * This version of the program will have a generic request with a string. 
- * The request will be sent to the intermediate and the client will wait until it receives a response from the intermediate
- * This version will enable a read request following the read request format outlined in the Assignment
- */
-
 import java.io.*;
 import java.net.*;
 
-
+/**
+ * The following is implementation for the Client
+ * 
+ * @since May 11 2014
+ * 
+ * @author 1000000
+ * @version May 15 2014
+ *
+ */
 public class Client {
+	public static final byte zero = (byte)0;
+	public static final byte one = (byte)1;
+	public static final byte two = (byte)2;	
 	
-	// socket deceleration for the required socket
-	DatagramSocket sendReceiveSocket;
+	private DatagramSocket sendReceiveSocket; // Socket used to send and receive packets
+	private DatagramPacket sendPacket, receivePacket; // Packets used to send an receive information
+	private String filenameString, modeString;
+	private byte filenameBytes[], modeBytes[];
+
+	private static byte readMsg[];
+	private static byte writeMsg[];
+	private static byte invMsg[];
 	
-	// packet deceleration for the packets being sent and received
-	DatagramPacket sendPacket, receivePacket;
-	
-	// declare filename and mode to be used
-	String filenameString, modeString;
-	byte filenameBytes[], modeBytes[];
-	
-	// create a 0, 1, and 2 byte
-	byte zero = (byte)0;
-	byte one = (byte)1;
-	byte two = (byte)2;
-	
-	// the messages that will be sent are stored in these variables 
-	static byte readMsg[];
-	static byte writeMsg[];
-	static byte invMsg[];
-	
-	// default constructor for Intermediate class 
+	/**
+	 * The following is the constructor for Client
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	public Client(){
+		
+		// initialize the DatagramSocket sendReceive to bind to any available port
+		try {
+			sendReceiveSocket = new DatagramSocket();
+		} // end try
+		catch (SocketException se){
+			System.err.println("Socket exception error: " + se.getMessage());
+		} // end catch
 		
 		// initialize the String variables that will be passed onto the program
 		filenameString = "moh.txt";
@@ -53,65 +59,88 @@ public class Client {
 		
 		System.out.println("edited3");
 		
-	}
+	} // end constructor
 	
 	/**
 	 * This procedure will create the read request
 	 * @return a byte array with a read message
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private byte[] readRqst(){
 		
 		return createMsg(one, filenameBytes, modeBytes);
-	}
+	} // end method
 	
 	/**
 	 * This procedure will create the write request
 	 * @return a byte array with a write message
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private byte[] writeRqst(){
 		
-		return 	createMsg(two, filenameBytes, modeBytes);
-	}
+		return createMsg(two, filenameBytes, modeBytes);
+	} // end method
 	
 	/**
 	 * This procedure will create the invalid request
 	 * @return a byte array with an invalid message
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private byte[] invRqst(){
 		
-		return 	createMsg(zero, filenameBytes, modeBytes);
-	}
-	
-	// send and receive procedure for the packet
-	// this procedure will also be able to accept a request depending on its arguments
+		return createMsg(zero, filenameBytes, modeBytes);
+	} // end method
+
 	/**
+	 * send and receive procedure for the packet
+	 * this procedure will also be able to accept a request depending on its arguments
 	 * @param rqstMsg a byte array which will have the message attached to the packet being sent
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private void sendReceive(byte[] rqstMsg)
-	{
-		// initialize the DatagramSocket sendReceive to bind to any available port
-		try {
-			sendReceiveSocket = new DatagramSocket();
-		} catch (SocketException se){
-			System.err.println("Socket exception error: " + se.getMessage());
-		}
-		
+	{		
 		System.out.println("Client has started...");
 				
 		// send the packet to well-known port 68
 		try {
 			sendPacket = new DatagramPacket(rqstMsg, rqstMsg.length, InetAddress.getLocalHost(), 68);
-		} catch (UnknownHostException uhe) {
+		} // end try
+		catch (UnknownHostException uhe) {
 			System.err.println("Unknown host exception error: " + uhe.getMessage());
-		}
+		} // end catch
 		
 		System.out.println("Client sending packet to intermediate...");
 	    // send the packet to the intermediate via the send socket 
 	    try {
 	       sendReceiveSocket.send(sendPacket);
-	       } catch (IOException ioe) {
+	    } // end try
+	    catch (IOException ioe) {
 	    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-	    }
+	    } // end catch
 	    
 		// prints out the information on the sent packet
 		System.out.println("Client packet sent to intermediate...");
@@ -127,9 +156,10 @@ public class Client {
 		try {
 			System.out.println("Client receiving packet from intermediate...");
 			sendReceiveSocket.receive(receivePacket);
-		} catch (IOException ioe) {
+		} // end try
+		catch (IOException ioe) {
 			System.err.println("IO Exception error: " + ioe.getMessage());
-		}
+		} // end catch
 		
 		// prints out the information on the received packet
 		printInformation(receivePacket);
@@ -138,11 +168,18 @@ public class Client {
 		// close the socket
 		sendReceiveSocket.close();
 		
-	}
+	} // end method
 
 	/**
 	 * the following method will be called when trying to print out information about a specific packet
 	 * @param p the information displayed desired for this packet
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private void printInformation(DatagramPacket p) {
 		
@@ -154,16 +191,24 @@ public class Client {
 		System.out.println("Bytes: ");
 		for (int i = 0; i < p.getLength(); i++) {
 			System.out.print(Integer.toHexString(p.getData()[i]));
-		}
+		} // end forloop
 		System.out.println("\n\n");
 		
-	}
+	} // end method
 	
 	/**
+	 * Following method will create the message which is being put into the packet
 	 * @param rqstByte will be 0 or 1 depending if it is a read or write request, otherwise invalid
 	 * @param file the file name
 	 * @param mode the mode 
 	 * @return a byte array for the message that we are sending
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private byte[] createMsg(byte rqstByte, byte file[], byte mode[]) {
 		// the message will be of size 4 (0, rqstByte, 0, 0) with the file length and mode length
@@ -182,7 +227,7 @@ public class Client {
 			msg[msgIndex] = file[byteCount];
 			byteCount++;
 			msgIndex++;
-		}
+		} // end forloop
 		
 		// add a 0 at index position 
 		msg[(msgIndex)] = zero;
@@ -196,15 +241,25 @@ public class Client {
 			msg[msgIndex] = mode[byteCount];
 			byteCount++;
 			msgIndex++;		
-		}
+		} // end forloop
 		
 		// add the final 0 in the message
 		msg[msgIndex] = zero;
 		
 		return msg;
-	}
+	} // end forloop
 	
-	// our main program
+	/**
+	 * Main method for the Client
+	 * @param args not used
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	public static void main(String[] args) {
 		Client client = new Client();
 		
@@ -215,9 +270,10 @@ public class Client {
 		for (int i = 0; i < 4; i++) {
 		client.sendReceive(readMsg);
 		client.sendReceive(writeMsg);
-		}
+		} // end forloop
 		
 		// have an invalid request sent
 		client.sendReceive(invMsg);
-	}
-}
+	} // end method
+	
+} // end class

@@ -1,59 +1,67 @@
-/**
- * SYSC 3303 - ASSIGNMENT 1
- * Intermediate.java
- * 
- * @author Mohammed Ahmed-Muhsin
- * @version 2.0 
- * This class is the intermediate object between the client and the server
- * Intermediate will create a DatagramSocket to use to receive (port 68)
- * Intermediate will create a DatagramSocket to use to send and receive
- * All packets coming into the Intermediate and out of it will have its information printed
- * The intermediate runs forever.
- */
-
 import java.io.IOException;
 import java.net.*;
 
+/**
+ * The following is implementation for the IntermediateHost
+ * 
+ * @since May 11 2014
+ * 
+ * @author 1000000
+ * @version May 15 2014
+ *
+ */
 public class Intermediate {
+	private DatagramSocket receiveSocket, sendReceiveSocket, sendSocket; // socket deceleration for all three required sockets 
+	private DatagramPacket receiveClientPacket, sendClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server 
 	
-	// socket deceleration for all three required sockets 
-	DatagramSocket receiveSocket;
-	DatagramSocket sendReceiveSocket;
-	DatagramSocket sendSocket;
-	
-	// packet deceleration for all packets being sent and received
-	// for both client and server 
-	DatagramPacket receiveClientPacket, sendClientPacket;
-	DatagramPacket receiveServerPacket, sendServerPacket;
-	
-	// default constructor for Intermediate class
+	/**
+	 * The following is the constructor for Intermediate
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	public Intermediate()
 	{
 		// initialize the DatagramSocket receiveSocket to bind to well-known port 68
 		try {
 			receiveSocket = new DatagramSocket(68);
-		} catch (SocketException se) {
+		} // end try 
+		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());
-		}
+		} // end catch
 		
 		// initialize the DatagramSocket sendReceiveSocket
 		try {
 			sendReceiveSocket = new DatagramSocket();
-		} catch (SocketException se) {
+		} // end try 
+		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());
-		}
+		} // end catch
 		
 		// initialize the DatagramSocket sendSocket
 		try {
 			sendSocket = new DatagramSocket();
-		} catch (SocketException se) {
+		} // end try 
+		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());
-		}
+		} // end catch
 				
-	}
+	} // end constructor 
 	
-	// sending and receiving method for the class
-	// this will be running almost always other than the initializing that happens before
+	/**
+	 * send and receive procedure for the class
+	 *
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	private void sendReceive() {
 		System.out.println("Intermediate has started...\n\n");
 		
@@ -68,9 +76,10 @@ public class Intermediate {
 			System.out.println("Intermediate is waiting to receive a packet from client...\n");
 			try {
 				receiveSocket.receive(receiveClientPacket);
-			} catch (IOException ioe) {
+			} // end try 
+			catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			}
+			} // end catch
 			
 			// print out information about the packet received from the client
 			printInformation(receiveClientPacket);
@@ -78,9 +87,10 @@ public class Intermediate {
 			// prepare the new send packet to the server
 			try {
 				sendServerPacket = new DatagramPacket(clientMsg, receiveClientPacket.getLength(), InetAddress.getLocalHost(), 69);
-			} catch (UnknownHostException uhe) {
+			} // end try 
+			catch (UnknownHostException uhe) {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
-			}
+			} // end catch
 			
 			System.out.println("Intermediate will attempt to send packet to server...\n");
 			
@@ -90,9 +100,10 @@ public class Intermediate {
 			// send the packet to the server via the send/receive socket to port 69
 		    try {
 		       sendReceiveSocket.send(sendServerPacket);
-		    } catch (IOException ioe) {
+		    } // end try 
+		    catch (IOException ioe) {
 		    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		    }
+		    } // end catch
 		    
 		    // print confirmation message that the packet has been sent to the server
 			System.out.println("Packet sent to server\n");
@@ -106,9 +117,10 @@ public class Intermediate {
 			// block until you receive a packet from the server
 			try {
 				sendReceiveSocket.receive(receiveServerPacket);
-			} catch (IOException ioe) {
+			} // end try 
+			catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			}
+			} // end catch
 			
 		
 			// print out information about the packet received from the server
@@ -125,20 +137,28 @@ public class Intermediate {
 		    // send the packet to the client via the send socket 
 		    try {
 		       sendSocket.send(sendClientPacket);
-		    } catch (IOException ioe) {
+		    } // end try 
+		    catch (IOException ioe) {
 		    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		    }
+		    } // end catch
 		    
 		    // print confirmation message that the packet has been sent to the client
 			System.out.println("Response packet sent to client\n");
 						
-		}
+		} // end whileloop
 		
-	}
+	} // end method
 	
 	/**
 	 * the following method will be called when trying to print out information about a specific packet
 	 * @param p the information displayed desired for this packet
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private void printInformation(DatagramPacket p) {
 		
@@ -150,13 +170,23 @@ public class Intermediate {
 		System.out.println("Bytes: ");
 		for (int i = 0; i < p.getLength(); i++) {
 			System.out.print(Integer.toHexString(p.getData()[i]));
-		}
+		} // end forloop
 		System.out.println("\n\n");
-	}
+	} // end method
 	
-	// the main program
+	/**
+	 * Main method for the IntermediateHost
+	 * @param args not used
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	public static void main(String[] args) {
 		Intermediate intermediate = new Intermediate();
 		intermediate.sendReceive();
-	}
-}
+	} // end method
+} // end class
