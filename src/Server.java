@@ -1,45 +1,55 @@
-/**
- * SYSC 3303 - ASSIGNMENT 1
- * 
- * @author Mohammed Ahmed-Muhsin
- * @version 2.0 
- * The server will create a receive DatagramSocket on port 69
- * It will wait for a request which it will parse and see if it is a read, write, or otherwise, invalid request
- * Server will print out the information for the packet and sends back an appropriate response
- * Creates a sending DatagramSokcet
- * Sends the packet and then closes the sending DatagramSocket
- */
-
 import java.io.*;
 import java.net.*;
 
+/**
+ * The following is implementation for the Server
+ * 
+ * @since May 11 2014
+ * 
+ * @author 1000000
+ * @version May 15 2014
+ *
+ */
 public class Server {
-
-	// declare sockets
-	DatagramSocket receiveSocket;
-	DatagramSocket sendSocket;
+	private DatagramSocket receiveSocket; // Socket used to receive
+	private DatagramSocket sendSocket; // Socket used to send
+	private DatagramPacket receivePacket; // Packet used to receive
+	private DatagramPacket sendPacket; // Packet used to send
+	private byte readAck[];
+	private byte writeAck[];
+	private byte invAck[];
 	
-	// declare packets
-	DatagramPacket receivePacket;
-	DatagramPacket sendPacket;
-
-	// create the byte arrays for the response
-	byte readAck[];
-	byte writeAck[];
-	byte invAck[];
-	
+	/**
+	 * The following is the constructor for Server
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	public Server() {
 		// initialize the socket to receive on port 69
 		try {
 			receiveSocket = new DatagramSocket(69);
-		} catch (SocketException se){
+		} // end try
+		catch (SocketException se){
 			System.err.println("Socket exception error: " + se.getMessage());
-		}
-	}
+		} // end catch
+	} // end constructor
 	
-	// send and receive procedure for the packet
-	// this procedure will also be able to accept either a write or read depending on its arguments
-	// to be implemented in a later version
+	/**
+	 * send and receive procedure for the packet
+	 * this procedure will also be able to read and write on its arguments
+	 *
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	private void sendReceive() {
 		System.out.println("Server has started...");
 		byte data[] = new byte[100];
@@ -50,16 +60,16 @@ public class Server {
 			// block until you receive a packet to well-known Socket port 69
 			try {
 				receiveSocket.receive(receivePacket);
-			} catch (IOException ioe) {
+			} // end try 
+			catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			}
+			} // end catch
 			
 			System.out.println("Server is receiving packet from intermediate...");
 			printInformation(receivePacket);
 					
 			// depending on the outcome, generate the response and set the sendPacket to equal that
-			// read response
-			if (parseRqst(receivePacket) == 0) {
+			if (parseRqst(receivePacket) == 0) { // read response
 				// create the read acknowledge [0301]
 				readAck = new byte[4];
 				readAck[0] = (byte)0;
@@ -68,9 +78,9 @@ public class Server {
 				readAck[3] = (byte)1;
 				
 				sendPacket = new DatagramPacket(readAck, 4, receivePacket.getAddress(), receivePacket.getPort());
-			}
-			// write response
-			else if (parseRqst(receivePacket) == 1) {
+			} // end if
+
+			else if (parseRqst(receivePacket) == 1) { // write response
 				// create the write acknowledge [0301]
 				writeAck = new byte[4];
 				writeAck[0] = (byte)0;
@@ -79,43 +89,52 @@ public class Server {
 				writeAck[3] = (byte)0;
 				
 				sendPacket = new DatagramPacket(writeAck, 4, receivePacket.getAddress(), receivePacket.getPort());
-			}
-			// invalid response		
-			else {
+			} // end if
+			else { // invalid response
 				// create the invalid acknowledge [05]
 				invAck = new byte[2];
 				invAck[0] = (byte)0;
 				invAck[1] = (byte)5;
 							
 				sendPacket = new DatagramPacket(invAck, 2, receivePacket.getAddress(), receivePacket.getPort());
-			}
+			} // end else
+			
 			// print out information about the response packet
 			System.out.println("Server is sending packet to intermediate...");
 			
 			// initialize the send socket
 			try {
 				sendSocket = new DatagramSocket();
-			} catch (SocketException se){
+			} // end try 
+			catch (SocketException se){
 				System.err.println("Socket exception error: " + se.getMessage());
-			}
+			} // end catch
 			
 		    // send the packet to the client via the send socket 
 		    try {
 		       sendSocket.send(sendPacket);
-		    } catch (IOException ioe) {
+		    } // end try 
+		    catch (IOException ioe) {
 		    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		    }
+		    } // end catch
 		    printInformation(sendPacket);
 			System.out.println("Server packet sent to intermediate.. closing the sending socket");
 			
 			// close the socket
 			sendSocket.close();
-		}		
-	}
+		} // end whileloop
+	} // end method
 	
 	/**
 	 * the following method will be called when trying to print out information about a specific packet
 	 * @param p the information displayed desired for this packet
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private void printInformation(DatagramPacket p) {
 		
@@ -127,14 +146,22 @@ public class Server {
 		System.out.println("Bytes: ");
 		for (int i = 0; i < p.getLength(); i++) {
 			System.out.print(Integer.toHexString(p.getData()[i]));
-		}
+		} // end forloop
 		System.out.println("\n\n");
 		
-	}
+	} // end method
 	
 	/**
+	 * The following method is used to parse the data received, and validate it
 	 * @param p packet that we are trying to parse
 	 * @return an integer value of 0 if it is a read request, 1 if it is a write request, or 404 for invalid
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
 	 */
 	private int parseRqst(DatagramPacket p){
 		// used for checking the form of the packet
@@ -150,7 +177,7 @@ public class Server {
 				if (p.getData()[p.getLength()-1] != 0) {
 					// if not, return invalid request
 					return 404;
-				}
+				} // end if
 				// now we check for a 0 in the middle
 				else
 				// if it is a null character, that means it has our 0 in the middle
@@ -159,25 +186,25 @@ public class Server {
 						// if there is a 0 right after our request bit, it is in valid
 						if (i == 2) {
 							return 404;
-						}
+						} // end if
 						// otherwise, we have a file name and return a valid read
 						else {
 							return 0;
-						}
-					}
+						} // end else
+					} // end if
 					// otherwise, this is part of the file name
 					else {
 						i++;
-					}
-				}
-			}
+					} // end else
+				} // end whileloop
+			} // end if
 			// write request bit is read
 			else if (p.getData()[1] == (byte)2) {
 				// check if last byte is a 0
 				if (p.getData()[p.getLength()-1] != 0) {
 					// if not, return invalid request
 					return 404;
-				}
+				} // end if
 				// now we check for a 0 in the middle
 				else
 				// if it is a null character, that means it has our 0 in the middle
@@ -186,25 +213,36 @@ public class Server {
 						// if there is a 0 right after our request bit, it is in valid
 						if (i == 2) {
 							return 404;
-						}
+						} // end if
 						// otherwise, we have a file name and return a valid write
 						else {
 							return 1;
-						}
-					}
+						} // end else
+					} // end if
 					// otherwise, this is part of the file name
 					else {
 						i++;
-					}
-				}
-			}
-		}
+					} // end else
+				} // end whileloop
+			} // end if
+		} // end if
 		return 404;
-	}
+	} // end method
 	
+	/**
+	 * Main method for the Server
+	 * @param args not used
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Code from assignment 1
+	 * @version May 15 2014
+	 * @author Moh
+	 * 
+	 */
 	public static void main(String[] args) {
 		Server server = new Server();
 		server.sendReceive();
-	}
+	} // end method
 	
-}
+} // end class
