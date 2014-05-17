@@ -9,5 +9,7 @@
  */
 public enum Request {
 	READ,
-	WRITE
+	WRITE,
+	DATA,
+	ACK
 }

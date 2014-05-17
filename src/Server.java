@@ -11,12 +11,13 @@ import java.net.*;
  *
  */
 public class Server {
-	public static final int DATA_SIZE = 512;
+	public static final int DATA_SIZE = 516;
 	
 	private DatagramSocket receive;
 	private DatagramPacket receivedata;
 	private byte data[];
 	private boolean verbose;
+	private static String fileName;
 	/**
 	 * The following is the constructor for Server
 	 * 
@@ -30,6 +31,7 @@ public class Server {
 	public Server(boolean verbose) {
 		data = new byte[DATA_SIZE];
 		this.verbose = verbose;
+		this.fileName = "";
 		
 		try { // initialize the socket to a well known port
 			receive = new DatagramSocket(69);
@@ -81,19 +83,46 @@ public class Server {
 		Request r;
 		if(p.getData()[0] != (byte)0)
 			System.exit(1); // TODO properly handle error
-		if(p.getData()[1] == (byte)1) {
-			r = Request.READ;
-			System.out.println("Is Read");
-		}
-		else if(p.getData()[1] == (byte)2) {
+		
+		
+		if(p.getData()[1] == (byte)3) {
 			r = Request.WRITE;
-			System.out.println("Is Write");
+			System.out.println("Is continued Write");
 		}
-		else{
-			System.exit(1); // TODO properly handle error
+		else if(p.getData()[1] == (byte)4) {
+			r = Request.READ;
+			System.out.println("Is continued Read");
+		}
+		else if(p.getData()[1] == (byte)5) {
+			System.exit(1);
 			return;
 		}
-		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength());
+		else{
+			if(p.getData()[1] == (byte)1)
+				r = Request.READ;
+			else if(p.getData()[1] == (byte)2)
+				r = Request.WRITE;
+			else
+				return;
+			
+			int innerzero = 0;
+			boolean found = false;
+			System.out.println(p.getLength());
+			for (int i = 2; i < p.getLength() - 1; i++) {
+				if (data[i] == (byte) 0) {
+					if (!found) {
+						innerzero = i;
+						found = true;
+					} // end if
+				}
+			}
+			byte[] fileNameByteArray = new byte[innerzero-2];
+			System.arraycopy(data, 2, fileNameByteArray, 0, innerzero-2);
+			fileName = new String(fileNameByteArray);
+			
+			
+		}
+		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength(), fileName);
 		newConnectionThread.start();
 	} // end method
 	

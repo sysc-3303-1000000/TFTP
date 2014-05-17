@@ -12,7 +12,7 @@ import java.io.*;
  *
  */
 public class ErrorSim {
-	public static final int DATA_SIZE = 512;
+	public static final int DATA_SIZE = 516;
 	
 	private DatagramSocket receiveSocket;
 	private DatagramPacket receiveClientPacket;
@@ -59,15 +59,15 @@ public class ErrorSim {
 	private void printPacketInfo(DatagramPacket p) {
 		
 		// print out the information on the packet
-				System.out.println("Host: " + p.getAddress());
-				System.out.println("Host port: " + p.getPort());
-				System.out.println("Containing the following \nString: " + new String(p.getData()));
-				System.out.println("Length of packet: " + p.getLength());
-				System.out.println("Bytes: ");
-				for (int i = 0; i < p.getLength(); i++) {
-					System.out.print(Integer.toHexString(p.getData()[i]));
-				} // end forloop
-				System.out.println("\n\n");
+		System.out.println("Host: " + p.getAddress());
+		System.out.println("Host port: " + p.getPort());
+		System.out.println("Containing the following \nString: " + new String(p.getData()));
+		System.out.println("Length of packet: " + p.getLength());
+		System.out.println("Bytes: ");
+		for (int i = 0; i < p.getLength(); i++) {
+			System.out.print(Integer.toHexString(p.getData()[i]));
+		} // end forloop
+		System.out.println("\n\n");
 	} // end method
 	
 	public void sendReceive(){
