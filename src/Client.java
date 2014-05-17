@@ -239,24 +239,35 @@ public class Client {
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream(filenameString));
 
 		byte[] data = new byte[512];
+		int i = 1;
 		
 		in.skip((blockNum-1)*512);
-		if (in.read(data) == 1) {
+		if (in.read(data) == -1) {
 			byte[] data1 = new byte[0];
 			return data1;
 		}
 		while (in.read(data) != -1) {
 		}
 		
-		in.close();
-		
-		return data;
+		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(filenameString));
 
+		in2.skip((blockNum-1)*512);
+		while (in2.read() != -1) {
+			i++;
+		}
+		
+		in2.close();
+		
+		byte[] newData = new byte[i];
+		System.arraycopy(data, 0, newData, 0, i);
+		
+		return newData;
+		
 	}
 	
 	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filenameString));
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + filenameString));
 	
 		out.write(writeData, (blockNum-1)*512, writeData.length);
 		out.close();
