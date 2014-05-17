@@ -158,5 +158,7 @@ public class ConnectionManagerESim extends Thread {
 	    // print confirmation message that the packet has been sent to the client
 		System.out.println("Response packet sent to client\n");
 		
+		sendReceiveSocket.close();
+		sendSocket.close();
 	} // end method
 } // end class

@@ -22,7 +22,6 @@ public class Client {
 
 	private static byte readMsg[];
 	private static byte writeMsg[];
-	private static byte invMsg[];
 	
 	/**
 	 * The following is the constructor for Client
@@ -53,61 +52,11 @@ public class Client {
 		modeBytes = modeString.getBytes();
 		
 		// initialize the messages
-		readMsg = readRqst();
-		writeMsg = writeRqst();
-		invMsg = invRqst();
-		
-		System.out.println("edited3");
+		readMsg = createMsg(one, filenameBytes, modeBytes);
+		writeMsg = createMsg(two, filenameBytes, modeBytes);
+
 		
 	} // end constructor
-	
-	/**
-	 * This procedure will create the read request
-	 * @return a byte array with a read message
-	 * 
-	 * @since May 11 2014
-	 * 
-	 * Latest Change: Added Code from assignment 1
-	 * @version May 15 2014
-	 * @author Moh
-	 * 
-	 */
-	private byte[] readRqst(){
-		
-		return createMsg(one, filenameBytes, modeBytes);
-	} // end method
-	
-	/**
-	 * This procedure will create the write request
-	 * @return a byte array with a write message
-	 * 
-	 * @since May 11 2014
-	 * 
-	 * Latest Change: Added Code from assignment 1
-	 * @version May 15 2014
-	 * @author Moh
-	 * 
-	 */
-	private byte[] writeRqst(){
-		
-		return createMsg(two, filenameBytes, modeBytes);
-	} // end method
-	
-	/**
-	 * This procedure will create the invalid request
-	 * @return a byte array with an invalid message
-	 * 
-	 * @since May 11 2014
-	 * 
-	 * Latest Change: Added Code from assignment 1
-	 * @version May 15 2014
-	 * @author Moh
-	 * 
-	 */
-	private byte[] invRqst(){
-		
-		return createMsg(zero, filenameBytes, modeBytes);
-	} // end method
 
 	/**
 	 * send and receive procedure for the packet
@@ -165,8 +114,7 @@ public class Client {
 		printInformation(receivePacket);
 		System.out.println("Client packet received.. closing open sockets");
 		
-		// close the socket
-		sendReceiveSocket.close();
+		sendReceiveSocket.close();	
 		
 	} // end method
 
@@ -264,7 +212,7 @@ public class Client {
 		Client client = new Client();
 		
 		// start with an invalid request 
-		client.sendReceive(invMsg);
+		//client.sendReceive(invMsg);
 		
 		// repeat the read and write requests 4 times, alternating
 		for (int i = 0; i < 4; i++) {
@@ -273,7 +221,8 @@ public class Client {
 		} // end forloop
 		
 		// have an invalid request sent
-		client.sendReceive(invMsg);
+		//client.sendReceive(invMsg);
+		
 	} // end method
 	
 } // end class

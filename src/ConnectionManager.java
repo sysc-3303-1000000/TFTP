@@ -8,7 +8,7 @@ import java.net.*;
  * @since May 13 2014
  * 
  * @author 1000000
- * @version May 13 2014
+ * @version May 17 2014
  *
  */
 public class ConnectionManager extends Thread {
@@ -51,9 +51,9 @@ public class ConnectionManager extends Thread {
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: Add format error checking
-	 * @version May 13 2014
-	 * @author Colin
+	 * Latest Change: Added response packets for read and write requests
+	 * @version May 17 2014
+	 * @author Moh
 	 * 
 	 */
 	public void run() {
@@ -93,7 +93,6 @@ public class ConnectionManager extends Thread {
 			sendData = new DatagramPacket(writeAck, 4, receivedPacket.getAddress(), receivedPacket.getPort());
 		} // end if
 		else if (req == Request.READ) {
-			// TODO Form acknowledge
 			// form the read block
 			byte readData[] = new byte[4];
 			readData[0] = (byte)0;
@@ -105,8 +104,12 @@ public class ConnectionManager extends Thread {
 			sendData = new DatagramPacket(readData, 4, receivedPacket.getAddress(), receivedPacket.getPort());
 		} // end if
 		
-		// TODO Form Datagram
-		// TODO Send Datagram
+		try { // send response back
+			send.send(sendData);
+		} // end try
+	    catch (IOException ioe) {
+	    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
+	    } // end catch
 		
 		send.close();
 	} // end method
