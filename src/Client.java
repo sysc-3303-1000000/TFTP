@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.*;
 
 /**
  * The following is implementation for the Client
@@ -117,7 +118,54 @@ public class Client {
 		System.out.println("Client packet received..");	
 		
 		if(req == Request.READ) {
-			
+			byte dat[] = receivePacket.getData();
+			byte ack[] = new byte[4];
+			dataNumber[0] = (byte)0;
+			dataNumber[1] = (byte)1;
+			dataBlock = 1;
+			ackBlock = 1;
+			while(verifydata(dataNumber, receivePacket)) {
+			ack[0] = (byte)0;
+			ack[1] = (byte)4;
+			ack[2] = (byte)0;
+			ack[3] = (byte)ackBlock;
+			try {
+				WriteToFile(dataBlock, Arrays.copyOfRange(dat, 4, dat.length));
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {// create the acknowledge packet to send back to the client
+				sendData = new DatagramPacket(ack, 4, InetAddress.getLocalHost(), 68);
+			} // end try
+			catch (UnknownHostException uhe) {
+				System.err.println("Unknown host exception error: " + uhe.getMessage());
+			} // end catch
+			try {
+			       sendReceiveSocket.send(sendData);
+			    } // end try
+			    catch (IOException ioe) {
+			    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
+			    } // end catch
+			if(dat.length < 516){
+				break;
+			}
+			    byte rly[] = new byte[516];
+				receivePacket = new DatagramPacket(rly, rly.length);
+				
+				try {
+					System.out.println("Client receiving packet from intermediate...");
+					sendReceiveSocket.receive(receivePacket);
+				} // end try
+				catch (IOException ioe) {
+					System.err.println("IO Exception error: " + ioe.getMessage());
+				} // end catch
+				dataNumber[1] = (byte)(dataNumber[1]+(byte)1);
+				ackBlock++;
+			}
 		}
 		else if (req == Request.WRITE) {
 			byte data[] = new byte[516];
@@ -204,6 +252,15 @@ public class Client {
 		return data;
 
 	}
+	
+	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
+	{
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(filenameString));
+	
+		out.write(writeData, (blockNum-1)*512, writeData.length);
+		out.close();
+
+	}
 	/**
 	 * 
 	 */
@@ -215,7 +272,21 @@ public class Client {
 			}
 		}
 		return false;
-	}/*
+	}
+	
+	/**
+	 * 
+	 */
+	private boolean verifydata(byte[] dataNumber, DatagramPacket p) {
+		byte data[] = p.getData();
+		if (data[0] == (byte)0 && data[1] == (byte)3) {
+			if (data[2] == dataNumber[0] && data[3] == dataNumber[1]) {
+				return true;
+			}
+		}
+		return false;
+	}
+	/*
 				data[0] = (byte)0;
 				data[1] = (byte)3;
 				data[2] = dataNumber[0];
