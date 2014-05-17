@@ -63,7 +63,7 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 16 2014
 	 * 
-	 * Latest Change: Ported from old intermediate
+	 * Latest Change: Ported from old intermediate, implements printing packet info
 	 * @version May 16 2014
 	 * @author Kais
 	 * 

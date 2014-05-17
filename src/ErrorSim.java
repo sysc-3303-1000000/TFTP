@@ -38,6 +38,7 @@ public class ErrorSim {
 	 * 
 	 */
 	public static void main(String[] args) {
-		Thread listernerESim = new ListenerESim(true); // enabled verbose for now
+		Thread listenerESim = new ListenerESim(true); // enabled verbose for now
+		listenerESim.start();
 	} // end method
 } // end class
