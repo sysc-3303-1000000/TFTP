@@ -31,7 +31,7 @@ public class ErrorSim {
 	 * @author Kais
 	 * 
 	 */
-	public ErrorSim() {
+	public ErrorSim(boolean verbose) {
 		data = new byte[DATA_SIZE];
 		this.verbose = verbose;
 		// initialize the DatagramSocket receiveSocket to bind to well-known port 68
@@ -41,6 +41,8 @@ public class ErrorSim {
 		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());
 		} // end catch
+		
+		receiveClientPacket = new DatagramPacket(data, data.length);
 	} // end constructor 
 	
 	/**
@@ -70,14 +72,14 @@ public class ErrorSim {
 	
 	public void sendReceive(){
 		int port;
-			
+		
 		for(;;) {
 				
 			try { // wait to receive the packet from client
 				receiveSocket.receive(receiveClientPacket);
 			} // end try 
 			catch (IOException ie) {
-				// TODO implement what happens when exception occurs
+				System.err.println("IOException error: " + ie.getMessage());
 			} // end catch
 				
 			data = receiveClientPacket.getData(); // extract message
@@ -92,7 +94,7 @@ public class ErrorSim {
 	}
 	
 	public static void main(String[] args) {
-		ErrorSim esim = new ErrorSim();
+		ErrorSim esim = new ErrorSim(true);
 		esim.sendReceive();
 	} // end method
 } // end class

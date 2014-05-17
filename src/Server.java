@@ -27,7 +27,7 @@ public class Server {
 	 * @author Kais
 	 * 
 	 */
-	public Server() {
+	public Server(boolean verbose) {
 		data = new byte[DATA_SIZE];
 		this.verbose = verbose;
 		
@@ -35,7 +35,7 @@ public class Server {
 			receive = new DatagramSocket(69);
 		} // end try
 		catch (SocketException se) {
-			// TODO implement what happens when exception occurs
+			System.err.println("Socket exception error: " + se.getMessage());
 		} // end catch
 		
 		receivedata = new DatagramPacket(data, data.length);
@@ -81,10 +81,14 @@ public class Server {
 		Request r;
 		if(p.getData()[0] != (byte)0)
 			System.exit(1); // TODO properly handle error
-		if(p.getData()[1] == (byte)1)
+		if(p.getData()[1] == (byte)1) {
 			r = Request.READ;
-		else if(p.getData()[1] == (byte)2)
+			System.out.println("Is Read");
+		}
+		else if(p.getData()[1] == (byte)2) {
 			r = Request.WRITE;
+			System.out.println("Is Write");
+		}
 		else{
 			System.exit(1); // TODO properly handle error
 			return;
@@ -97,17 +101,18 @@ public class Server {
 	 * 
 	 */
 	public void sendReceive() {
+		System.out.println("Starting the server infinite loop");
 		for(;;) {
 			
 			try { // wait to receive the packet from client
 				receive.receive(receivedata);
 			} // end try 
 			catch (IOException ie) {
-				// TODO implement what happens when exception occurs
+				System.err.println("IOException error: " + ie.getMessage());
 			} // end catch
 			
 			//data = receivedata.getData(); // extract message
-			
+			System.out.println("Packet received from ErrorSim");
 			if(verbose)
 				printPacketInfo(receivedata);
 
@@ -127,7 +132,7 @@ public class Server {
 	 * 
 	 */
 	public static void main(String[] args) {
-		Server server = new Server();
+		Server server = new Server(true);
 		server.sendReceive();
 	} // end method
 	
