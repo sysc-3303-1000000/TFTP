@@ -93,7 +93,7 @@ public class Server {
 			System.exit(1); // TODO properly handle error
 			return;
 		}
-		Thread newConnectionThread = new ConnectionManager(verbose, p, r);
+		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r);
 		newConnectionThread.start();
 	} // end method
 	

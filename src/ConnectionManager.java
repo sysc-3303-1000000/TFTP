@@ -12,12 +12,15 @@ import java.net.*;
  *
  */
 public class ConnectionManager extends Thread {
+	public static final int DATA_SIZE = 512;
+	
 	private DatagramSocket send;
 	private DatagramPacket sendData;
 	private boolean verbose;
 	private int port;
 	private Request req;
 	private DatagramPacket receivedPacket;
+	private byte data[];
 	/**
 	 * The following is the constructor for ConnectionManager
 	 * @param verbose whether verbose mode is enabled
@@ -31,11 +34,11 @@ public class ConnectionManager extends Thread {
 	 * @author Colin
 	 * 
 	 */
-	public ConnectionManager(boolean verbose, DatagramPacket p, Request r) {
+	public ConnectionManager(boolean verbose, byte[] data, int port, Request r) {
 		this.verbose = verbose;
-		port = p.getPort();
+		this.port = port;
 		req = r;
-		receivedPacket = p;
+		this.data = data;
 		
 		try { // initialize the socket
 			send = new DatagramSocket();
@@ -62,11 +65,8 @@ public class ConnectionManager extends Thread {
 		int innerzero = 0;
 		boolean found = false;
 		System.out.println("About to hit for loop statement in run");
-		System.out.println(receivedPacket.getData());
-		System.out.println(receivedPacket.getLength());
-		for (int i = 2; i < receivedPacket.getLength() - 1; i++) {
-			System.out.println("Starting for loop to find innerzero");
-			if (receivedPacket.getData()[i] == (byte) 0) {
+		for (int i = 2; i < data.length - 1; i++) {
+			if (data[i] == (byte) 0) {
 				if (!found) {
 					innerzero = i;
 					found = true;
@@ -76,7 +76,7 @@ public class ConnectionManager extends Thread {
 			}
 		}
 		System.out.println("Finished for loop to find innerzero");
-		if (receivedPacket.getData()[receivedPacket.getLength()] != (byte) 0)
+		if (data[data.length-1] != (byte) 0)
 			error = true;
 		
 		if(error){
@@ -98,7 +98,7 @@ public class ConnectionManager extends Thread {
 			writeAck[3] = (byte)0;
 			
 			try {// create the acknowledge packet to send back to the client
-				sendData = new DatagramPacket(writeAck, 4, InetAddress.getLocalHost(), receivedPacket.getPort());
+				sendData = new DatagramPacket(writeAck, 4, InetAddress.getLocalHost(), port);
 			} // end try
 			catch (UnknownHostException uhe) {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
@@ -114,7 +114,7 @@ public class ConnectionManager extends Thread {
 			readData[3] = (byte)1;
 			
 			try { // create the data packet to send back to the client
-			sendData = new DatagramPacket(readData, 4, InetAddress.getLocalHost(), receivedPacket.getPort());
+				sendData = new DatagramPacket(readData, 4, InetAddress.getLocalHost(), port);
 			} // end try
 			catch (UnknownHostException uhe) {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());

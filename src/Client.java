@@ -112,9 +112,7 @@ public class Client {
 		
 		// prints out the information on the received packet
 		printInformation(receivePacket);
-		System.out.println("Client packet received.. closing open sockets");
-		
-		sendReceiveSocket.close();	
+		System.out.println("Client packet received.. closing open sockets");	
 		
 	} // end method
 
