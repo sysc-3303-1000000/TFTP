@@ -246,7 +246,7 @@ public class ConnectionManager extends Thread {
 	public byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
 		
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + fileName));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + fileName));
 
 		byte[] data = new byte[512];
 		int i = 1;
@@ -262,7 +262,7 @@ public class ConnectionManager extends Thread {
 		
 		in.close();
 		
-		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + fileName));
+		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + fileName));
 
 		in2.skip((blockNum-1)*512);
 		while (in2.read() != -1) {

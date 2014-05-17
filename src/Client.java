@@ -236,7 +236,7 @@ public class Client {
 	public byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
 		
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + filenameString));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + filenameString));
 
 		byte[] data = new byte[512];
 		int i = 1;
@@ -249,7 +249,7 @@ public class Client {
 		while (in.read(data) != -1) {
 		}
 		
-		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + filenameString));
+		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + filenameString));
 
 		in2.skip((blockNum-1)*512);
 		while (in2.read() != -1) {
