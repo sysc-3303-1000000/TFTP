@@ -142,7 +142,9 @@ public class Client {
 				    System.out.println("IO Exception: " + e.toString());
 				    System.exit(0);
 				   }
-				   
+				if (fileData.length == 0){
+					break;
+				}
 				   System.arraycopy(fileData, 0, data, 4, fileData.length);
 				   
 				   try {
@@ -168,10 +170,10 @@ public class Client {
 					catch (IOException ioe) {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 					} // end catch
-					ackNumber[1] = reply[3];
+					ackNumber[1] = (byte)(ackNumber[1]+(byte)1);
 					dataBlock++;
 					
-			}
+			} // end whileloop
 		}
 		
 	} // end method
@@ -188,11 +190,13 @@ public class Client {
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream(filenameString));
 
 		byte[] data = new byte[512];
-		int n;
 		
-		in.skip((blockNum)*512);
-
-		while ((n = in.read(data)) != -1) {
+		in.skip((blockNum-1)*512);
+		if (in.read(data) == 1) {
+			byte[] data1 = new byte[0];
+			return data1;
+		}
+		while (in.read(data) != -1) {
 		}
 		
 		in.close();
