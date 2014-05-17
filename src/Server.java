@@ -72,8 +72,8 @@ public class Server {
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: Calls ConnectionManager thread and verifies read or write
-	 * @version May 15 2014
+	 * Latest Change: Added length of packet
+	 * @version May 17 2014
 	 * @author Colin
 	 * 
 	 */
@@ -93,7 +93,7 @@ public class Server {
 			System.exit(1); // TODO properly handle error
 			return;
 		}
-		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r);
+		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength());
 		newConnectionThread.start();
 	} // end method
 	

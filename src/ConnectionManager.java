@@ -21,24 +21,27 @@ public class ConnectionManager extends Thread {
 	private Request req;
 	private DatagramPacket receivedPacket;
 	private byte data[];
+	private int length;
 	/**
 	 * The following is the constructor for ConnectionManager
 	 * @param verbose whether verbose mode is enabled
 	 * @param p DatagramPacket received by Listener
 	 * @param req the type of request
+	 * @param length the length of the data packet
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: Taking in DatagramPacket instead of port
+	 * Latest Change: Added in length
 	 * @version May 15 2014
 	 * @author Colin
 	 * 
 	 */
-	public ConnectionManager(boolean verbose, byte[] data, int port, Request r) {
+	public ConnectionManager(boolean verbose, byte[] data, int port, Request r, int length) {
 		this.verbose = verbose;
 		this.port = port;
 		req = r;
 		this.data = data;
+		this.length = length;
 		
 		try { // initialize the socket
 			send = new DatagramSocket();
@@ -65,7 +68,8 @@ public class ConnectionManager extends Thread {
 		int innerzero = 0;
 		boolean found = false;
 		System.out.println("About to hit for loop statement in run");
-		for (int i = 2; i < data.length - 1; i++) {
+		for (int i = 2; i < length - 1; i++) {
+			//System.out.println("i: " + i + " found: " + found + " error: " + error + " data[i]: " + Integer.toHexString(data[i]));
 			if (data[i] == (byte) 0) {
 				if (!found) {
 					innerzero = i;
@@ -75,6 +79,12 @@ public class ConnectionManager extends Thread {
 					error = true;
 			}
 		}
+		
+		if(error){
+			System.out.println("Error");
+			// TODO send error
+		}
+		
 		System.out.println("Finished for loop to find innerzero");
 		if (data[data.length-1] != (byte) 0)
 			error = true;

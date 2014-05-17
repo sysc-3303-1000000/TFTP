@@ -51,9 +51,9 @@ public class ErrorSim {
 	 * 
 	 * @since May 16 2014
 	 * 
-	 * Latest Change: Added function definition, no implementation done
-	 * @version May 16 2014
-	 * @author Kais
+	 * Latest Change: Added length being sent
+	 * @version May 17 2014
+	 * @author Colin
 	 * 
 	 */
 	private void printPacketInfo(DatagramPacket p) {

@@ -28,12 +28,13 @@ public class ConnectionManagerESim extends Thread {
 	 * @param verbose whether verbose mode is enabled
 	 * @param data the message which will be sent to the server
 	 * @param port the port which the message from the server will be sent to
+	 * @param length the length of the data packet
 	 * 
 	 * @since May 16 2014
 	 * 
-	 * Latest Change: Added constructor code to initialize the sockets and fields
-	 * @version May 16 2014
-	 * @author Kais
+	 * Latest Change: Added length
+	 * @version May 17 2014
+	 * @author Colin
 	 * 
 	 */
 	public ConnectionManagerESim(boolean verbose, byte[] data, int port, int length) {
