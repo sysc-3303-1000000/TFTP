@@ -20,7 +20,8 @@ public class Client {
 	private DatagramPacket sendPacket, receivePacket, sendData; // Packets used to send an receive information
 	private String filenameString, modeString;
 	private byte filenameBytes[], modeBytes[];
-	private byte[] ackNumber, dataNumber;
+	private byte[] ackNumber = new byte[2];
+	private byte[] dataNumber = new byte[2];
 	private int dataBlock, ackBlock;
 
 	private static byte readMsg[];
@@ -196,7 +197,7 @@ public class Client {
 				   System.arraycopy(fileData, 0, data, 4, fileData.length);
 				   
 				   try {
-						sendData = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), 68);
+						sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), 68);
 					} // end try
 					catch (UnknownHostException uhe) {
 						System.err.println("Unknown host exception error: " + uhe.getMessage());
@@ -405,10 +406,10 @@ public class Client {
 		//client.sendReceive(invMsg);
 		
 		// repeat the read and write requests 4 times, alternating
-		for (int i = 0; i < 4; i++) {
-		client.sendReceive(readMsg, Request.READ);
+		//for (int i = 0; i < 4; i++) {
+		//client.sendReceive(readMsg, Request.READ);
 		client.sendReceive(writeMsg, Request.WRITE);
-		} // end forloop
+		//} // end forloop
 		
 		// have an invalid request sent
 		//client.sendReceive(invMsg);

@@ -116,17 +116,21 @@ public class ConnectionManager extends Thread {
 			
 		} // end if
 		else if (req == Request.DATA) {
-			System.out.println("writeAck");
+			System.out.println("DATA");
+			
 			
 			int blockNum = 0;
 			blockNum += (int)data[2] * 10;
 			blockNum += data[3];
+
+			System.out.println("calling write now");
 			
 			byte writeAck[] = new byte[4];
 			writeAck[0] = (byte)0;
 			writeAck[1] = (byte)4;
 			writeAck[2] = (byte)(blockNum - (blockNum % 10));
 			writeAck[3] = (byte)(blockNum % 10);
+			System.out.println("calling write now");
 			
 			try {
 				WriteToFile(blockNum, Arrays.copyOfRange(data, 4, data.length));
@@ -232,9 +236,16 @@ public class ConnectionManager extends Thread {
 	
 	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(fileName));
-	
-		out.write(writeData, (blockNum-1)*512, writeData.length);
+	    System.out.println("writing to file");
+		//File as = new File ("C:\\Users\\Colin\\" + fileName);
+	    //if (!as.exists()) {
+	    //    as.createNewFile();
+	   // }
+	  //  System.out.println(as.getName());
+	    
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream("C:\\Users\\Colin\\" + fileName));
+		System.out.println("write data length: " + writeData.length + "block num: " + blockNum);
+		out.write(writeData, (blockNum-1)*512, writeData.length-1);
 		out.close();
 	}
 	

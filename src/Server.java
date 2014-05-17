@@ -86,11 +86,11 @@ public class Server {
 		
 		
 		if(p.getData()[1] == (byte)3) {
-			r = Request.WRITE;
+			r = Request.DATA;
 			System.out.println("Is continued Write");
 		}
 		else if(p.getData()[1] == (byte)4) {
-			r = Request.READ;
+			r = Request.ACK;
 			System.out.println("Is continued Read");
 		}
 		else if(p.getData()[1] == (byte)5) {
