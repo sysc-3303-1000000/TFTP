@@ -16,9 +16,11 @@ public class Client {
 	public static final byte two = (byte)2;	
 	
 	private DatagramSocket sendReceiveSocket; // Socket used to send and receive packets
-	private DatagramPacket sendPacket, receivePacket; // Packets used to send an receive information
+	private DatagramPacket sendPacket, receivePacket, sendData; // Packets used to send an receive information
 	private String filenameString, modeString;
 	private byte filenameBytes[], modeBytes[];
+	private byte[] ackNumber, dataNumber;
+	private int dataBlock, ackBlock;
 
 	private static byte readMsg[];
 	private static byte writeMsg[];
@@ -70,7 +72,7 @@ public class Client {
 	 * @author Moh
 	 * 
 	 */
-	private void sendReceive(byte[] rqstMsg)
+	private void sendReceive(byte[] rqstMsg, Request req)
 	{		
 		System.out.println("Client has started...");
 				
@@ -97,7 +99,7 @@ public class Client {
 
 		
 		// prepare to receive a packet
-		byte rply[] = new byte[100];
+		byte rply[] = new byte[516];
 		receivePacket = new DatagramPacket(rply, rply.length);
 		
 		// block until you receive a packet
@@ -112,10 +114,129 @@ public class Client {
 		
 		// prints out the information on the received packet
 		printInformation(receivePacket);
-		System.out.println("Client packet received.. closing open sockets");	
+		System.out.println("Client packet received..");	
+		
+		if(req == Request.READ) {
+			
+		}
+		else if (req == Request.WRITE) {
+			byte data[] = new byte[516];
+			ackNumber[0] = (byte)0;
+			ackNumber[1] = (byte)0;
+			dataBlock = 1;
+			ackBlock = 0;
+			while(verifyack(ackNumber, receivePacket)) {
+				data[0] = (byte)0;
+				data[1] = (byte)3;
+				data[2] = (byte)0;
+				data[3] = (byte)dataBlock;
+				
+				byte[] fileData = new byte[0];
+				   
+				   try {
+				    fileData = ReadFromFile(dataBlock);
+				   } catch (FileNotFoundException e) {
+				    System.out.println("File Not Found: " + e.toString());
+				    System.exit(0);
+				   } catch (IOException e) {
+				    System.out.println("IO Exception: " + e.toString());
+				    System.exit(0);
+				   }
+				if (fileData.length == 0){
+					break;
+				}
+				   System.arraycopy(fileData, 0, data, 4, fileData.length);
+				   
+				   try {
+						sendData = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), 68);
+					} // end try
+					catch (UnknownHostException uhe) {
+						System.err.println("Unknown host exception error: " + uhe.getMessage());
+					} // end catch
+				   
+				   try {
+				       sendReceiveSocket.send(sendData);
+				    } // end try
+				    catch (IOException ioe) {
+				    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
+				    } // end catch
+				    byte reply[] = new byte[4];
+					receivePacket = new DatagramPacket(reply, reply.length);
+					
+					try {
+						System.out.println("Client receiving packet from intermediate...");
+						sendReceiveSocket.receive(receivePacket);
+					} // end try
+					catch (IOException ioe) {
+						System.err.println("IO Exception error: " + ioe.getMessage());
+					} // end catch
+					ackNumber[1] = (byte)(ackNumber[1]+(byte)1);
+					dataBlock++;
+					
+			} // end whileloop
+		}
 		
 	} // end method
+	/**
+	 * 
+	 * @param blockNum
+	 * @return
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	public byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
+	{
+		
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(filenameString));
 
+		byte[] data = new byte[512];
+		
+		in.skip((blockNum-1)*512);
+		if (in.read(data) == 1) {
+			byte[] data1 = new byte[0];
+			return data1;
+		}
+		while (in.read(data) != -1) {
+		}
+		
+		in.close();
+		
+		return data;
+
+	}
+	/**
+	 * 
+	 */
+	private boolean verifyack(byte[] ackNumber, DatagramPacket p) {
+		byte ack[] = p.getData();
+		if (ack[0] == (byte)0 && ack[1] == (byte)4) {
+			if (ack[2] == ackNumber[0] && ack[3] == ackNumber[1]) {
+				return true;
+			}
+		}
+		return false;
+	}/*
+				data[0] = (byte)0;
+				data[1] = (byte)3;
+				data[2] = dataNumber[0];
+				data[3] = (byte)dataBlock;
+				
+				 byte[] fileData = new byte[0];
+				   
+				   try {
+				    fileData = ReadFromFile(dataBlock);
+				   } catch (FileNotFoundException e) {
+				    System.out.println("File Not Found: " + e.toString());
+				    System.exit(0);
+				   } catch (IOException e) {
+				    System.out.println("IO Exception: " + e.toString());
+				    System.exit(0);
+				   }
+				   
+				   System.arraycopy(fileData, 0, data, 4, fileData.length);
+			}
+		}
+	}*/
 	/**
 	 * the following method will be called when trying to print out information about a specific packet
 	 * @param p the information displayed desired for this packet
@@ -214,8 +335,8 @@ public class Client {
 		
 		// repeat the read and write requests 4 times, alternating
 		for (int i = 0; i < 4; i++) {
-		client.sendReceive(readMsg);
-		client.sendReceive(writeMsg);
+		client.sendReceive(readMsg, Request.READ);
+		client.sendReceive(writeMsg, Request.WRITE);
 		} // end forloop
 		
 		// have an invalid request sent
