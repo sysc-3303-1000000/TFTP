@@ -71,7 +71,6 @@ public class ErrorSim {
 	} // end method
 	
 	public void sendReceive(){
-		int port;
 		
 		for(;;) {
 				
@@ -81,14 +80,11 @@ public class ErrorSim {
 			catch (IOException ie) {
 				System.err.println("IOException error: " + ie.getMessage());
 			} // end catch
-				
-			data = receiveClientPacket.getData(); // extract message
-			port = receiveClientPacket.getPort();
-				
+								
 			if(verbose)
 				printPacketInfo(receiveClientPacket);
 				
-			Thread connectionmanager = new ConnectionManagerESim(verbose, data, port);
+			Thread connectionmanager = new ConnectionManagerESim(verbose, data, receiveClientPacket.getPort(), receiveClientPacket.getLength());
 			connectionmanager.start();
 		} // end forloop
 	}

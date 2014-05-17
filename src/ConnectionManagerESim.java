@@ -21,6 +21,7 @@ public class ConnectionManagerESim extends Thread {
 	private boolean verbose;
 	private byte data[];
 	private int port;
+	private int length;
 	
 	/**
 	 * The following is the constructor for ListenerESim
@@ -35,10 +36,11 @@ public class ConnectionManagerESim extends Thread {
 	 * @author Kais
 	 * 
 	 */
-	public ConnectionManagerESim(boolean verbose, byte[] data, int port) {
+	public ConnectionManagerESim(boolean verbose, byte[] data, int port, int length) {
 		this.verbose = verbose;
 		this.data = data;
 		this.port = port;
+		this.length = length;
 		
 		try {
 			sendReceiveSocket = new DatagramSocket();
@@ -96,7 +98,7 @@ public class ConnectionManagerESim extends Thread {
 	public void run() {
 		// prepare the new send packet to the server
 		try {
-			sendServerPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), SERVER_PORT);
+			sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), SERVER_PORT);
 		} // end try 
 		catch (UnknownHostException uhe) {
 			System.err.println("Unknown host exception error: " + uhe.getMessage());

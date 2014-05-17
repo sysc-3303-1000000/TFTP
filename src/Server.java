@@ -102,6 +102,7 @@ public class Server {
 	 */
 	public void sendReceive() {
 		System.out.println("Starting the server infinite loop");
+		receivedata =  new DatagramPacket(data, data.length);
 		for(;;) {
 			
 			try { // wait to receive the packet from client
@@ -113,6 +114,7 @@ public class Server {
 			
 			//data = receivedata.getData(); // extract message
 			System.out.println("Packet received from ErrorSim");
+			System.out.println(receivedata.getLength());
 			if(verbose)
 				printPacketInfo(receivedata);
 
