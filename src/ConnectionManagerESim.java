@@ -13,7 +13,7 @@ import java.net.*;
  *
  */
 public class ConnectionManagerESim extends Thread {
-	public static final int DATA_SIZE = 512;
+	public static final int DATA_SIZE = 516;
 	public static final int SERVER_PORT = 69;
 	
 	private DatagramSocket sendReceiveSocket, sendSocket; // socket deceleration for all three required sockets 
