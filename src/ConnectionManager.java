@@ -18,7 +18,6 @@ public class ConnectionManager extends Thread {
 	private int port;
 	private Request req;
 	private DatagramPacket receivedPacket;
-	
 	/**
 	 * The following is the constructor for ConnectionManager
 	 * @param verbose whether verbose mode is enabled
@@ -83,10 +82,27 @@ public class ConnectionManager extends Thread {
 
 		if (req == Request.WRITE) {
 			// TODO write to file
-			// TODO Form acknowledge
+			// form the write Acknowledge block
+			byte writeAck[] = new byte[4];
+			writeAck[0] = (byte)0;
+			writeAck[1] = (byte)4;
+			writeAck[2] = (byte)0;
+			writeAck[3] = (byte)0;
+			
+			// create the acknowledge packet to send back to the client
+			sendData = new DatagramPacket(writeAck, 4, receivedPacket.getAddress(), receivedPacket.getPort());
 		} // end if
 		else if (req == Request.READ) {
 			// TODO Form acknowledge
+			// form the read block
+			byte readData[] = new byte[4];
+			readData[0] = (byte)0;
+			readData[1] = (byte)3;
+			readData[2] = (byte)0;
+			readData[3] = (byte)1;
+			
+			// create the data packet to send back to the client
+			sendData = new DatagramPacket(readData, 4, receivedPacket.getAddress(), receivedPacket.getPort());
 		} // end if
 		
 		// TODO Form Datagram
