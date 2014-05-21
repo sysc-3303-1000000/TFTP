@@ -63,15 +63,15 @@ public class Client {
 	} // end constructor
 
 	/**
-	 * send and receive procedure for the packet
+	 * Send and receive procedure for the packet
 	 * this procedure will also be able to accept a request depending on its arguments
 	 * @param rqstMsg a byte array which will have the message attached to the packet being sent
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Added Code from assignment 1
-	 * @version May 15 2014
-	 * @author Moh
+	 * Latest Change: Added implementation of reading and writing
+	 * @version May 20 2014
+	 * @author Kais
 	 * 
 	 */
 	private void sendReceive(byte[] rqstMsg, Request req)
@@ -126,19 +126,22 @@ public class Client {
 			dataBlock = 1;
 			ackBlock = 1;
 			while(verifydata(dataNumber, receivePacket)) {
-			ack[0] = (byte)0;
-			ack[1] = (byte)4;
-			ack[2] = (byte)0;
-			ack[3] = (byte)ackBlock;
+				ack[0] = (byte)0;
+				ack[1] = (byte)4;
+				ack[2] = (byte)0;
+				ack[3] = (byte)ackBlock;
 			try {
 				WriteToFile(dataBlock, Arrays.copyOfRange(dat, 4, dat.length));
-			} catch (FileNotFoundException e) {
+			} // end try 
+			catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			} catch (IOException e) {
+			} // end catch 
+			catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}
+			} // end catch
+			
 			try {// create the acknowledge packet to send back to the client
 				sendData = new DatagramPacket(ack, 4, InetAddress.getLocalHost(), 68);
 			} // end try
@@ -146,28 +149,29 @@ public class Client {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
 			} // end catch
 			try {
-			       sendReceiveSocket.send(sendData);
-			    } // end try
-			    catch (IOException ioe) {
-			    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			    } // end catch
-			if(dat.length < 516){
+			    sendReceiveSocket.send(sendData);
+			} // end try
+			catch (IOException ioe) {
+				System.err.println("Unknown IO exception error: " + ioe.getMessage());
+			} // end catch
+			if (dat.length < 516) {
 				break;
-			}
-			    byte rly[] = new byte[516];
-				receivePacket = new DatagramPacket(rly, rly.length);
+			} // end if
+			
+			byte rly[] = new byte[516];
+			receivePacket = new DatagramPacket(rly, rly.length);
 				
-				try {
-					System.out.println("Client receiving packet from intermediate...");
-					sendReceiveSocket.receive(receivePacket);
-				} // end try
-				catch (IOException ioe) {
-					System.err.println("IO Exception error: " + ioe.getMessage());
-				} // end catch
-				dataNumber[1] = (byte)(dataNumber[1]+(byte)1);
-				ackBlock++;
-			}
-		}
+			try {
+				System.out.println("Client receiving packet from intermediate...");
+				sendReceiveSocket.receive(receivePacket);
+			} // end try
+			catch (IOException ioe) {
+				System.err.println("IO Exception error: " + ioe.getMessage());
+			} // end catch
+			dataNumber[1] = (byte)(dataNumber[1]+(byte)1);
+			ackBlock++;
+			} // end whileloop
+		} // end if
 		else if (req == Request.WRITE) {
 			byte data[] = new byte[516];
 			ackNumber[0] = (byte)0;
@@ -182,58 +186,70 @@ public class Client {
 				
 				byte[] fileData = new byte[0];
 				   
-				   try {
-				    fileData = ReadFromFile(dataBlock);
-				   } catch (FileNotFoundException e) {
+				try {
+					fileData = ReadFromFile(dataBlock);
+				} // end try
+				catch (FileNotFoundException e) {
 				    System.out.println("File Not Found: " + e.toString());
 				    System.exit(0);
-				   } catch (IOException e) {
+				} // end catch 
+				catch (IOException e) {
 				    System.out.println("IO Exception: " + e.toString());
 				    System.exit(0);
-				   }
-				if (fileData.length == 0){
+				} // end catch
+				if (fileData.length == 0) {
 					break;
-				}
-				   System.arraycopy(fileData, 0, data, 4, fileData.length);
+				} // end if
+				
+				System.arraycopy(fileData, 0, data, 4, fileData.length);
 				   
-				   try {
-						sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), 68);
-					} // end try
-					catch (UnknownHostException uhe) {
-						System.err.println("Unknown host exception error: " + uhe.getMessage());
-					} // end catch
+				try {
+					sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), 68);
+				} // end try
+				catch (UnknownHostException uhe) {
+					System.err.println("Unknown host exception error: " + uhe.getMessage());
+				} // end catch
 				   
-				   try {
-				       sendReceiveSocket.send(sendData);
-				    } // end try
-				    catch (IOException ioe) {
-				    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-				    } // end catch
-				    byte reply[] = new byte[4];
-					receivePacket = new DatagramPacket(reply, reply.length);
+				try {
+					sendReceiveSocket.send(sendData);
+				} // end try
+				catch (IOException ioe) {
+					System.err.println("Unknown IO exception error: " + ioe.getMessage());
+				} // end catch
+				
+				byte reply[] = new byte[4];
+				receivePacket = new DatagramPacket(reply, reply.length);
 					
-					try {
-						System.out.println("Client receiving packet from intermediate...");
-						sendReceiveSocket.receive(receivePacket);
-					} // end try
-					catch (IOException ioe) {
-						System.err.println("IO Exception error: " + ioe.getMessage());
-					} // end catch
-					ackNumber[1] = (byte)(ackNumber[1]+(byte)1);
-					dataBlock++;
+				try {
+					System.out.println("Client receiving packet from intermediate...");
+					sendReceiveSocket.receive(receivePacket);
+				} // end try
+				catch (IOException ioe) {
+					System.err.println("IO Exception error: " + ioe.getMessage());
+				} // end catch
+				ackNumber[1] = (byte)(ackNumber[1]+(byte)1);
+				dataBlock++;
 					
 			} // end whileloop
-		}
+		} // end if
 		
 	} // end method
+	
 	/**
+	 * The following is the method to read data from a file, if client requests a write
+	 * @param blockNum the block which is to be read
+	 * @return the block of data which was read
+	 * @throws FileNotFoundException if the file cannot be found
+	 * @throws IOException if there is an issue with IO
 	 * 
-	 * @param blockNum
-	 * @return
-	 * @throws FileNotFoundException
-	 * @throws IOException
+	 * @since May 17 2014
+	 * 
+	 * Latest Change: Added implementation of how stuff is read based on Colin's server code
+	 * @version May 17 2014
+	 * @author Colin
+	 * 
 	 */
-	public byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
+	private byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
 		
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + filenameString));
@@ -245,16 +261,16 @@ public class Client {
 		if (in.read(data) == -1) {
 			byte[] data1 = new byte[0];
 			return data1;
-		}
+		} // end if
 		while (in.read(data) != -1) {
-		}
+		} // end whileloop
 		
 		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + filenameString));
 
 		in2.skip((blockNum-1)*512);
 		while (in2.read() != -1) {
 			i++;
-		}
+		} // end whileloop
 		
 		in2.close();
 		
@@ -263,17 +279,42 @@ public class Client {
 		
 		return newData;
 		
-	}
+	} // end method
 	
-	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
+	/**
+	 * The following is the method used to write data to a file, done if client requests a read
+	 * @param blockNum the block which is to be written
+	 * @param writeData the data which is to be written
+	 * @throws FileNotFoundException if the file cannot be found
+	 * @throws IOException if there is an issue with IO
+	 * 
+	 * @since May 17 2014
+	 * 
+	 * Latest Change: Added implementation of how stuff is written based on Colin's server code
+	 * @version May 17 2014
+	 * @author Colin
+	 * 
+	 */
+	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
 		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + filenameString));
 	
 		out.write(writeData, (blockNum-1)*512, writeData.length);
 		out.close();
 
-	}
+	} // end method
+	
 	/**
+	 * The following verifies that the data packet contains the block number it should 
+	 * @param ackNumber the current ack packet which p should be (block #)
+	 * @param p the ack packet sent by the server
+	 * @return if the ack block is the correct one
+	 * 
+	 * @since May 17 2014
+	 * 
+	 * Latest Change: Added implementation of how verification is done
+	 * @version May 17 2014
+	 * @author Kais
 	 * 
 	 */
 	private boolean verifyack(byte[] ackNumber, DatagramPacket p) {
@@ -281,12 +322,22 @@ public class Client {
 		if (ack[0] == (byte)0 && ack[1] == (byte)4) {
 			if (ack[2] == ackNumber[0] && ack[3] == ackNumber[1]) {
 				return true;
-			}
-		}
+			} // end if
+		} // end if
 		return false;
-	}
+	} // end method
 	
 	/**
+	 * The following verifies that the data packet contains the block number it should 
+	 * @param dataNumber the current data packet which p should be (block #)
+	 * @param p the data packet sent by the server
+	 * @return if the data block is the correct one
+	 * 
+	 * @since May 17 2014
+	 * 
+	 * Latest Change: Added implementation of how verification is done
+	 * @version May 17 2014
+	 * @author Kais
 	 * 
 	 */
 	private boolean verifydata(byte[] dataNumber, DatagramPacket p) {
@@ -294,34 +345,13 @@ public class Client {
 		if (data[0] == (byte)0 && data[1] == (byte)3) {
 			if (data[2] == dataNumber[0] && data[3] == dataNumber[1]) {
 				return true;
-			}
-		}
+			} // end if
+		} // end if
 		return false;
-	}
-	/*
-				data[0] = (byte)0;
-				data[1] = (byte)3;
-				data[2] = dataNumber[0];
-				data[3] = (byte)dataBlock;
-				
-				 byte[] fileData = new byte[0];
-				   
-				   try {
-				    fileData = ReadFromFile(dataBlock);
-				   } catch (FileNotFoundException e) {
-				    System.out.println("File Not Found: " + e.toString());
-				    System.exit(0);
-				   } catch (IOException e) {
-				    System.out.println("IO Exception: " + e.toString());
-				    System.exit(0);
-				   }
-				   
-				   System.arraycopy(fileData, 0, data, 4, fileData.length);
-			}
-		}
-	}*/
+	} // end method
+
 	/**
-	 * the following method will be called when trying to print out information about a specific packet
+	 * The following method will be called when trying to print out information about a specific packet
 	 * @param p the information displayed desired for this packet
 	 * 
 	 * @since May 11 2014
@@ -405,26 +435,16 @@ public class Client {
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Added Code from assignment 1
-	 * @version May 15 2014
-	 * @author Moh
+	 * Latest Change: Changed for Iteration 1
+	 * @version May 20 2014
+	 * @author Kais
 	 * 
 	 */
 	public static void main(String[] args) {
 		Client client = new Client();
-		
-		// start with an invalid request 
-		//client.sendReceive(invMsg);
-		
-		// repeat the read and write requests 4 times, alternating
-		//for (int i = 0; i < 4; i++) {
-		//client.sendReceive(readMsg, Request.READ);
+		client.sendReceive(readMsg, Request.READ);
 		client.sendReceive(writeMsg, Request.WRITE);
-		//} // end forloop
-		
-		// have an invalid request sent
-		//client.sendReceive(invMsg);
-		
+
 	} // end method
 	
 } // end class
