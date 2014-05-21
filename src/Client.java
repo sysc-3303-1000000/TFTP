@@ -170,6 +170,7 @@ public class Client {
 			} // end catch
 			dataNumber[1] = (byte)(dataNumber[1]+(byte)1);
 			ackBlock++;
+			dataBlock++;
 			} // end whileloop
 		} // end if
 		else if (req == Request.WRITE) {
@@ -298,7 +299,7 @@ public class Client {
 	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
 		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + filenameString));
-	
+		System.out.println("block num: " + blockNum);
 		out.write(writeData, (blockNum-1)*512, writeData.length);
 		out.close();
 
@@ -443,7 +444,7 @@ public class Client {
 	public static void main(String[] args) {
 		Client client = new Client();
 		client.sendReceive(readMsg, Request.READ);
-		client.sendReceive(writeMsg, Request.WRITE);
+		//client.sendReceive(writeMsg, Request.WRITE);
 
 	} // end method
 	

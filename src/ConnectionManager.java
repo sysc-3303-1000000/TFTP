@@ -262,7 +262,7 @@ public class ConnectionManager extends Thread {
 		
 		in.close();
 		
-		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + fileName));
+		/*BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + fileName));
 
 		in2.skip((blockNum-1)*512);
 		while (in2.read() != -1) {
@@ -270,11 +270,11 @@ public class ConnectionManager extends Thread {
 		}
 		
 		in2.close();
-		
+		System.out.println(i);
 		byte[] newData = new byte[i];
 		System.arraycopy(data, 0, newData, 0, i);
-		
-		return newData;
+		*/
+		return data;
 
 	}
 
