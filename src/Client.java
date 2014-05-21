@@ -22,7 +22,7 @@ public class Client {
 	private byte filenameBytes[], modeBytes[];
 	private byte[] ackNumber = new byte[2];
 	private byte[] dataNumber = new byte[2];
-	private int dataBlock, ackBlock;
+	private int blockNum, ackNum;
 
 	private static byte readMsg[];
 	private static byte writeMsg[];
@@ -123,15 +123,15 @@ public class Client {
 			byte ack[] = new byte[4];
 			dataNumber[0] = (byte)0;
 			dataNumber[1] = (byte)1;
-			dataBlock = 1;
-			ackBlock = 1;
+			blockNum = 1;
+			ackNum = 1;
 			while(verifydata(dataNumber, receivePacket)) {
 				ack[0] = (byte)0;
 				ack[1] = (byte)4;
-				ack[2] = (byte)0;
-				ack[3] = (byte)ackBlock;
+				ack[2] = (byte)((ackNum - (ackNum % 256))/256);
+				ack[3] = (byte)(ackNum % 256);
 			try {
-				WriteToFile(dataBlock, Arrays.copyOfRange(dat, 4, dat.length));
+				WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, dat.length));
 			} // end try 
 			catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
@@ -169,26 +169,23 @@ public class Client {
 				System.err.println("IO Exception error: " + ioe.getMessage());
 			} // end catch
 			dataNumber[1] = (byte)(dataNumber[1]+(byte)1);
-			ackBlock++;
-			dataBlock++;
+			ackNum++;
+			blockNum++;
+			dat = rly;
 			} // end whileloop
 		} // end if
 		else if (req == Request.WRITE) {
-			byte data[] = new byte[516];
 			ackNumber[0] = (byte)0;
 			ackNumber[1] = (byte)0;
-			dataBlock = 1;
-			ackBlock = 0;
+			blockNum = 1;
+			ackNum = 0;
 			while(verifyack(ackNumber, receivePacket)) {
-				data[0] = (byte)0;
-				data[1] = (byte)3;
-				data[2] = (byte)0;
-				data[3] = (byte)dataBlock;
+				
 				
 				byte[] fileData = new byte[0];
 				   
 				try {
-					fileData = ReadFromFile(dataBlock);
+					fileData = ReadFromFile(blockNum);
 				} // end try
 				catch (FileNotFoundException e) {
 				    System.out.println("File Not Found: " + e.toString());
@@ -198,6 +195,13 @@ public class Client {
 				    System.out.println("IO Exception: " + e.toString());
 				    System.exit(0);
 				} // end catch
+				
+				byte data[] = new byte[4 + fileData.length];
+				data[0] = (byte)0;
+				data[1] = (byte)3;
+				data[2] = (byte)((blockNum - (blockNum % 256))/256);
+				data[3] = (byte)(blockNum % 256);
+				
 				if (fileData.length == 0) {
 					break;
 				} // end if
@@ -229,7 +233,7 @@ public class Client {
 					System.err.println("IO Exception error: " + ioe.getMessage());
 				} // end catch
 				ackNumber[1] = (byte)(ackNumber[1]+(byte)1);
-				dataBlock++;
+				blockNum++;
 					
 			} // end whileloop
 		} // end if
@@ -256,29 +260,25 @@ public class Client {
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + filenameString));
 
 		byte[] data = new byte[512];
-		int i = 1;
+		int i = 0;
 		
 		in.skip((blockNum-1)*512);
-		if (in.read(data) == -1) {
-			byte[] data1 = new byte[0];
-			return data1;
-		} // end if
-		while (in.read(data) != -1) {
-		} // end whileloop
 		
-		BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + filenameString));
-
-		in2.skip((blockNum-1)*512);
-		while (in2.read() != -1) {
-			i++;
-		} // end whileloop
+		if ((i = in.read(data)) == -1){
+			in.close();
+			return new byte[0];
+		}
 		
-		in2.close();
+		in.close();
 		
-		byte[] newData = new byte[i];
-		System.arraycopy(data, 0, newData, 0, i);
+		if (i < 512)
+		{
+			byte[] tempData = new byte[i];
+			System.arraycopy(data, 0, tempData, 0, i);
+			return tempData;
+		}
 		
-		return newData;
+		return data;
 		
 	} // end method
 	
@@ -298,9 +298,8 @@ public class Client {
 	 */
 	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + filenameString));
-		System.out.println("block num: " + blockNum);
-		out.write(writeData, (blockNum-1)*512, writeData.length);
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + filenameString, (blockNum > 1) ? true : false));
+		out.write(writeData, 0, writeData.length);
 		out.close();
 
 	} // end method

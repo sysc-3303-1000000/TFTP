@@ -120,7 +120,7 @@ public class ConnectionManager extends Thread {
 			
 			
 			int blockNum = 0;
-			blockNum += (int)data[2] * 10;
+			blockNum += (data[2]) * 256;
 			blockNum += data[3];
 
 			System.out.println("calling write now");
@@ -128,8 +128,8 @@ public class ConnectionManager extends Thread {
 			byte writeAck[] = new byte[4];
 			writeAck[0] = (byte)0;
 			writeAck[1] = (byte)4;
-			writeAck[2] = (byte)(blockNum - (blockNum % 10));
-			writeAck[3] = (byte)(blockNum % 10);
+			writeAck[2] = (byte)(data[2]);
+			writeAck[3] = (byte)(data[3]);
 			System.out.println("calling write now");
 			
 			try {
@@ -183,17 +183,13 @@ public class ConnectionManager extends Thread {
 		else if(req == Request.ACK)
 		{
 			int blockNum = 0;
-			blockNum += (int)data[2] * 10;
+			blockNum += ((int)data[2]) * 256;
 			blockNum += data[3];
 			
 			blockNum++;
 			
 			System.out.println("readData");
-			byte readData[] = new byte[516];
-			readData[0] = (byte)0;
-			readData[1] = (byte)3;
-			readData[2] = (byte)(blockNum - (blockNum % 10));
-			readData[3] = (byte)(blockNum % 10);
+			
 			
 			byte[] fileData = new byte[0];
 			
@@ -206,6 +202,12 @@ public class ConnectionManager extends Thread {
 				System.out.println("IO Exception: " + e.toString());
 				System.exit(0);
 			}
+			
+			byte readData[] = new byte[4 + fileData.length];
+			readData[0] = (byte)0;
+			readData[1] = (byte)3;
+			readData[2] = (byte)((blockNum - (blockNum % 256))/256);
+			readData[3] = (byte)(blockNum % 256);
 			
 			if (fileData.length == 0){
 				send.close();
@@ -238,8 +240,8 @@ public class ConnectionManager extends Thread {
 	{
 	    System.out.println("writing to file");
 	    
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + fileName));
-		out.write(writeData, (blockNum-1)*512, writeData.length-1);
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + fileName, (blockNum > 1) ? true : false));
+		out.write(writeData, 0, writeData.length);
 		out.close();
 	}
 	
@@ -249,31 +251,24 @@ public class ConnectionManager extends Thread {
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + fileName));
 
 		byte[] data = new byte[512];
-		int i = 1;
+		int i = 0;
 		
 		in.skip((blockNum-1)*512);
 		
-		if(in.read(data) == -1)
+		if((i = in.read(data)) == -1){
+			in.close();
 			return new byte[0];
-
-		while (in.read(data) != -1) {
-			i++;
 		}
 		
 		in.close();
-		
-		/*BufferedInputStream in2 = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + fileName));
-
-		in2.skip((blockNum-1)*512);
-		while (in2.read() != -1) {
-			i++;
+				
+		if (i < 512)
+		{
+			byte[] tempData = new byte[i];
+			System.arraycopy(data, 0, tempData, 0, i);
+			return tempData;
 		}
 		
-		in2.close();
-		System.out.println(i);
-		byte[] newData = new byte[i];
-		System.arraycopy(data, 0, newData, 0, i);
-		*/
 		return data;
 
 	}
