@@ -2,7 +2,7 @@ import java.io.*;
 import javax.swing.filechooser.*;
 
 /**
- * DISCLAIMER: THE FOLLOWING CODE IS NOT OUR WORK. WE ARE USING IT TO MAKE A MORE PROPER UI.
+ * DISCLAIMER: THE FOLLOWING CODE IS NOT OUR WORK. WE DO NOT TAKE ANY CREDIT FOR ITS ENTIRETY.
  * 
  * IT WAS TAKEN FROM THE FOLLOWING LOCATION: http://tips4java.wordpress.com/2009/01/28/single-root-file-chooser/
  */

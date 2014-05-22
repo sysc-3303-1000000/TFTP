@@ -18,6 +18,7 @@ import java.awt.event.*;
  *
  */
 public class ClientUI {
+	
 	private static Request req;
 	private static int exit;
 	private static Scanner in;
