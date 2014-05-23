@@ -57,7 +57,7 @@ public class ErrorSim {
 		this.verbose = verbose;
 		// initialize the DatagramSocket receiveSocket to bind to well-known port 68
 		try {
-			receiveSocket = new DatagramSocket(68);
+			receiveSocket = new DatagramSocket(2068);
 		} // end try 
 		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());

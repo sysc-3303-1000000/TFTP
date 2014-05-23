@@ -145,8 +145,10 @@ public class ConnectionManagerESim extends Thread {
 			
 			// this is not the first packet, we need to wait for the client to send back to us
 			if (!firstPacket) {
+				byte rly[] = new byte[DATA_SIZE];
+				receiveClientPacket = new DatagramPacket(rly, rly.length);
 				try { // wait to receive client packet
-					sendReceiveSocket.receive(receiveClientPacket);
+					sendSocket.receive(receiveClientPacket);
 				}//end try 
 				catch (IOException ie) {
 					System.err.println("IOException error: " + ie.getMessage());
