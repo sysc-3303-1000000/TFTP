@@ -74,17 +74,17 @@ public class Server {
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: Added length of packet
-	 * @version May 17 2014
-	 * @author Colin
+	 * Latest Change: No more ack or data stuff
+	 * @version May 22 2014
+	 * @author Kais
 	 * 
 	 */
-	private void verify(DatagramPacket p) { // Needs fixing for new connectionManager which doesn't die off per packet 
-		Request r;
+	private void verify(DatagramPacket p) {  
+		Request r = null;
 		if(p.getData()[0] != (byte)0)
 			System.exit(1); // TODO properly handle error
 		
-		
+		/*
 		if(p.getData()[1] == (byte)3) {
 			r = Request.DATA;
 			System.out.println("Is continued Write");
@@ -92,18 +92,19 @@ public class Server {
 		else if(p.getData()[1] == (byte)4) {
 			r = Request.ACK;
 			System.out.println("Is continued Read");
-		}
+		}*/
 		else if(p.getData()[1] == (byte)5) {
 			System.exit(1);
 			return;
 		}
-		else{
-			if(p.getData()[1] == (byte)1)
+		else if(p.getData()[1] == (byte)1)
 				r = Request.READ;
-			else if(p.getData()[1] == (byte)2)
+		else if(p.getData()[1] == (byte)2)
 				r = Request.WRITE;
-			else
-				return;
+		else
+			return;
+		if(r == null)
+			return;
 			
 			int innerzero = 0;
 			boolean found = false;
@@ -121,7 +122,6 @@ public class Server {
 			fileName = new String(fileNameByteArray);
 			
 			
-		}
 		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength(), fileName);
 		newConnectionThread.start();
 	} // end method
