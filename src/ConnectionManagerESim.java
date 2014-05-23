@@ -25,6 +25,10 @@ public class ConnectionManagerESim extends Thread {
 	private int port;
 	private int length;
 	private int mode;	// will have the value of the current error simulation mode 
+	private Request requestType;
+	private boolean lastPacketWrite = false;
+	private boolean lastPacketRead = false;
+	private boolean firstPacket = true;
 	
 	/**
 	 * The following is the constructor for ListenerESim
@@ -40,12 +44,13 @@ public class ConnectionManagerESim extends Thread {
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong
 	 * 
 	 */
-	public ConnectionManagerESim(boolean verbose, int userChoice, byte[] data, int port, int length) {
+	public ConnectionManagerESim(boolean verbose, int userChoice, byte[] data, int port, int length, Request requestType) {
 		this.verbose = verbose;
 		this.data = data;
 		this.port = port;
 		this.length = length;
 		this.mode = userChoice;
+		this.requestType = requestType;
 		
 		try {
 			sendReceiveSocket = new DatagramSocket();
@@ -131,7 +136,9 @@ public class ConnectionManagerESim extends Thread {
 	 */
 	private void normalOp() 
 	{
-		// prepare the new send packet to the server
+		while(true)
+		{
+			// prepare the new send packet to the server
 			try {
 				sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
 			} // end try 
@@ -152,6 +159,19 @@ public class ConnectionManagerESim extends Thread {
 		    
 		    // print confirmation message that the packet has been sent to the server
 			System.out.println("Packet sent to server");
+			if (lastPacketRead == true)	
+			{
+				break;	// Last packet is now sent. The thread will close
+			}
+			if (requestType == Request.WRITE && !firstPacket)
+			{
+				if(sendServerPacket.getLength() < DATA_SIZE)
+				{
+					lastPacketWrite = true;	
+				}
+			}
+			
+			//*********************************************************************************
 			
 			byte response[] = new byte[DATA_SIZE];
 			
@@ -198,9 +218,22 @@ public class ConnectionManagerESim extends Thread {
 		    
 		    // print confirmation message that the packet has been sent to the client
 			System.out.println("Response packet sent to client");
-			
-			sendReceiveSocket.close();
-			sendSocket.close();
+			firstPacket = false;		// any following packets the connection manager receives will be not the second packet
+			if (lastPacketWrite == true)
+			{
+				break;	// Last packet is now sent. The thread will close
+			}
+			if (requestType == Request.READ && !firstPacket)	
+			{
+				if(sendServerPacket.getLength() < DATA_SIZE)
+				{
+					lastPacketRead = true;
+				}
+			}	
+		}
+		System.out.println("The Connection Manager for ErrorSim is now closed");
+		sendReceiveSocket.close();
+		sendSocket.close();
 	}
 	
 	/**
