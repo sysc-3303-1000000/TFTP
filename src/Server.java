@@ -79,7 +79,7 @@ public class Server {
 	 * @author Colin
 	 * 
 	 */
-	private void verify(DatagramPacket p) { // Needs fixing for new connectionManager which doesn't die off per packet
+	private void verify(DatagramPacket p) { // Needs fixing for new connectionManager which doesn't die off per packet 
 		Request r;
 		if(p.getData()[0] != (byte)0)
 			System.exit(1); // TODO properly handle error

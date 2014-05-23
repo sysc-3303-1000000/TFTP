@@ -9,7 +9,7 @@ import java.util.Arrays;
  * @since May 13 2014
  * 
  * @author 1000000
- * @version May 17 2014
+ * @version May 22 2014
  *
  */
 public class ConnectionManager extends Thread {
