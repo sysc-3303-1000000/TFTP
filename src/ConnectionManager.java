@@ -67,55 +67,78 @@ public class ConnectionManager extends Thread {
 	 */
 	public void run() {
 		System.out.println("Spawned ConnectionManager thread");
-		/*boolean error = false;
-		int innerzero = 0;
-		boolean found = false;
-		for (int i = 2; i < length - 1; i++) {
-			if (data[i] == (byte) 0) {
-				if (!found) {
-					innerzero = i;
-					found = true;
-				} // end if
-				else
-					error = true;
-			}
-		}
 		
-		if (data[data.length-1] != (byte) 0)
-			error = true;
-		
-		if(error){
-			System.out.println("Error");
-			// TODO send error
-		}
-		if (innerzero == 2 || innerzero == 0)
-			error = true;
-		
-		if(error){
-			System.out.println("Error");
-			// TODO send error
-		}
-		*/
-		if (req == Request.WRITE) {
+		if (req == Request.WRITE) { // done by Kais to keep alive until full write is serviced, needs testing
 			// TODO write to file
 			// form the write Acknowledge block
 			System.out.println("writeAck");
+			int blockNum = 0; // we are servicing a write, so first block number is 0
 			byte writeAck[] = new byte[4];
 			writeAck[0] = (byte)0;
 			writeAck[1] = (byte)4;
 			writeAck[2] = (byte)0;
 			writeAck[3] = (byte)0;
-						
+			// send the first ack packet
 			try {// create the acknowledge packet to send back to the client
 				sendData = new DatagramPacket(writeAck, 4, InetAddress.getLocalHost(), port);
 			} // end try
 			catch (UnknownHostException uhe) {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
 			} // end catch
-			
+			try { // send response back
+				send.send(sendData);
+			} // end try
+		    catch (IOException ioe) {
+		    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		    } // end catch
+			System.out.println("Server sent first ack for write back to ErrorSim");
+			// while we receive data packets that are 516 in size (break inside while)
+			while (true) {
+				byte dat[] = new byte[DATA_SIZE];
+				receivedPacket = new DatagramPacket(dat, dat.length);
+				// wait to receive the data packet
+				try {
+					System.out.println("Client receiving packet from intermediate...");
+					send.receive(receivedPacket);
+				} // end try
+				catch (IOException ioe) {
+					System.err.println("IO Exception error: " + ioe.getMessage());
+				} // end catch
+				blockNum++; // next block number
+				
+				try {
+					WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, dat.length)); // write the data
+				} catch (FileNotFoundException e) {
+					System.out.println("File Not Found: " + e.toString());
+					System.exit(0);
+				} catch (IOException e) {
+					System.out.println("IO Exception: " + e.toString());
+					System.exit(0);
+				}
+				// form the ack packet based on blockNumber
+				writeAck[0] = (byte)0;
+				writeAck[1] = (byte)4;
+				writeAck[2] = (byte)((blockNum - (blockNum % 256))/256);
+				writeAck[3] = (byte)(blockNum % 256);
+				try {// create the acknowledge packet to send back to the client
+					sendData = new DatagramPacket(writeAck, 4, InetAddress.getLocalHost(), receivedPacket.getPort()); // we are going to send this packet to the connectionManagerESim thread
+				} // end try
+				catch (UnknownHostException uhe) {
+					System.err.println("Unknown host exception error: " + uhe.getMessage());
+				} // end catch
+				try { // send response back
+					send.send(sendData);
+				} // end try
+			    catch (IOException ioe) {
+			    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
+			    } // end catch
+				if (receivedPacket.getLength() < 516) { // repeat unless that was the last data packet
+					break;
+				} // end if
+			}
 			
 		} // end if
-		else if (req == Request.DATA) {
+		/*else if (req == Request.DATA) {
 			System.out.println("DATA");
 			
 			
@@ -149,7 +172,7 @@ public class ConnectionManager extends Thread {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
 			} // end catch
 			
-		}
+		}*/
 		else if (req == Request.READ) {
 			// form the read block
 			System.out.println("readData");
@@ -180,7 +203,7 @@ public class ConnectionManager extends Thread {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
 			} // end catch
 		} // end if
-		else if(req == Request.ACK)
+		/*else if(req == Request.ACK)
 		{
 			int blockNum = 0;
 			blockNum += ((int)data[2]) * 256;
@@ -223,15 +246,15 @@ public class ConnectionManager extends Thread {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
 			} // end catch
 			
-		}
+		}*/
 		
-		try { // send response back
+		/*try { // send response back
 			send.send(sendData);
 		} // end try
 	    catch (IOException ioe) {
 	    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
 	    } // end catch
-		System.out.println("Server sent response back to ErrorSim");
+		System.out.println("Server sent response back to ErrorSim");*/
 		send.close();
 		
 	} // end method
