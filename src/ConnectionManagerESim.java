@@ -251,7 +251,7 @@ public class ConnectionManagerESim extends Thread {
 			}
 			if (requestType == Request.READ && !firstPacket)	
 			{
-				if(sendServerPacket.getLength() < DATA_SIZE)
+				if(sendClientPacket.getLength() < DATA_SIZE)
 				{
 					lastPacketRead = true;
 				}

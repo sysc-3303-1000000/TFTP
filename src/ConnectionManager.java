@@ -94,20 +94,25 @@ public class ConnectionManager extends Thread {
 			System.out.println("Server sent first ack for write back to ErrorSim");
 			// while we receive data packets that are 516 in size (break inside while)
 			while (true) {
-				byte dat[] = new byte[DATA_SIZE];
-				receivedPacket = new DatagramPacket(dat, dat.length);
+				byte data[] = new byte[DATA_SIZE];
+				receivedPacket = new DatagramPacket(data, data.length);
 				// wait to receive the data packet
 				try {
-					System.out.println("Client receiving packet from intermediate...");
+					System.out.println("Server receiving packet from intermediate...");
 					send.receive(receivedPacket);
 				} // end try
 				catch (IOException ioe) {
 					System.err.println("IO Exception error: " + ioe.getMessage());
 				} // end catch
-				blockNum++; // next block number
+				
+				blockNum = 0;
+				blockNum += (data[2]) * 256;
+				blockNum += data[3];
+				
+				//blockNum++; // next block number
 				
 				try {
-					WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, dat.length)); // write the data
+					WriteToFile(blockNum, Arrays.copyOfRange(data, 4, receivedPacket.getLength())); // write the data
 				} catch (FileNotFoundException e) {
 					System.out.println("File Not Found: " + e.toString());
 					System.exit(0);
@@ -133,9 +138,11 @@ public class ConnectionManager extends Thread {
 			    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
 			    } // end catch
 				if (receivedPacket.getLength() < 516) { // repeat unless that was the last data packet
+					System.out.println("Closing Connectionmanager thread");
 					break;
 				} // end if
 			}
+			send.close();
 			
 		} // end if
 		/*else if (req == Request.DATA) {
@@ -177,6 +184,9 @@ public class ConnectionManager extends Thread {
 			// form the read block
 			System.out.println("readData");
 			byte readData[] = new byte[516];
+			int blockNum = 0;
+			int finalBlockNum = 0;
+			boolean finalBlock = false;
 			readData[0] = (byte)0;
 			readData[1] = (byte)3;
 			readData[2] = (byte)0;
@@ -202,6 +212,80 @@ public class ConnectionManager extends Thread {
 			catch (UnknownHostException uhe) {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
 			} // end catch
+			try { // send response back
+				send.send(sendData);
+			} // end try
+		    catch (IOException ioe) {
+		    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		    } // end catch
+
+			//printInformation(sendData);
+			
+			while(true){
+				byte data[] = new byte[4];
+				receivedPacket = new DatagramPacket(data, data.length);
+				
+				try{
+					System.out.println("Server receiving packet from intermediate...");
+					send.receive(receivedPacket);
+				}
+				catch(IOException ioe) {
+					System.err.println("IO Exception error: " + ioe.getMessage());
+				} // end catch
+				
+				System.out.println("Received packet from intermediate...");
+							
+				blockNum = 0;
+				blockNum += (data[2]) * 256;
+				blockNum += data[3];
+				
+				blockNum++;
+				
+				if(finalBlock && blockNum > finalBlockNum){
+					System.out.println("Exiting, blocknum: " + blockNum);
+					break;
+				}
+				
+				fileData = new byte[0];
+				
+				try{
+					fileData = ReadFromFile(blockNum);
+				} catch (FileNotFoundException e) {
+					System.out.println("File Not Found: " + e.toString());
+					System.exit(0);
+				} catch (IOException e) {
+					System.out.println("IO Exception: " + e.toString());
+					System.exit(0);
+				}
+				
+				readData = new byte[4 + fileData.length];
+				readData[0] = (byte)0;
+				readData[1] = (byte)3;
+				readData[2] = (byte)((blockNum - (blockNum % 256))/256);
+				readData[3] = (byte)(blockNum % 256);
+				
+				System.arraycopy(fileData, 0, readData, 4, fileData.length);
+				
+				try { // create the data packet to send back to the client
+					sendData = new DatagramPacket(readData, fileData.length + 4, InetAddress.getLocalHost(), receivedPacket.getPort());
+				} // end try
+				catch (UnknownHostException uhe) {
+					System.err.println("Unknown host exception error: " + uhe.getMessage());
+				} // end catch
+				try { // send response back
+					send.send(sendData);
+				} // end try
+			    catch (IOException ioe) {
+			    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
+			    } // end catch
+				
+				if(fileData.length < 512){
+					System.out.println("Setting finalBlockNum: " + blockNum);
+					finalBlockNum = blockNum;
+					finalBlock = true;
+				}
+				
+			}
 		} // end if
 		/*else if(req == Request.ACK)
 		{
@@ -261,8 +345,6 @@ public class ConnectionManager extends Thread {
 	
 	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
-	    System.out.println("writing to file");
-	    
 		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + fileName, (blockNum > 1) ? true : false));
 		out.write(writeData, 0, writeData.length);
 		out.close();
@@ -295,5 +377,21 @@ public class ConnectionManager extends Thread {
 		return data;
 
 	}
+	
+private void printInformation(DatagramPacket p) {
+		
+		// print out the information on the packet
+		System.out.println("PACKET INFORMATION:");
+		System.out.println("Host: " + p.getAddress());
+		System.out.println("Host port: " + p.getPort());
+		System.out.println("Containing the following \nString: " + new String(p.getData()));
+		System.out.println("Length of packet: " + p.getLength());
+		System.out.println("Bytes: ");
+		for (int i = 0; i < p.getLength(); i++) {
+			System.out.print(Integer.toHexString(p.getData()[i]));
+		} // end forloop
+		System.out.println("\n******************************************************");
+		System.out.println("\n\n");
+	} // end method
 
 } // end class
