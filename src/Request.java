@@ -11,5 +11,6 @@ public enum Request {
 	READ,
 	WRITE,
 	DATA,
-	ACK
+	ACK,
+	ERROR
 }

@@ -52,7 +52,7 @@ public class ErrorSim {
 	 * @version May 16 2014
 	 * @author Kais
 	 */
-	public ErrorSim(boolean verbose, int choice) {
+	public ErrorSim(boolean verbose) {	
 		data = new byte[DATA_SIZE];
 		this.verbose = verbose;
 		// initialize the DatagramSocket receiveSocket to bind to well-known port 68
@@ -133,10 +133,39 @@ public class ErrorSim {
 			if(verbose)
 				printPacketInfo(receiveClientPacket);
 				
-			Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, data, receiveClientPacket.getPort(), receiveClientPacket.getLength());
+			Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
 			connectionmanager.start();
 		} // end forloop
 	}
+	
+	/**
+	 * The following is used to verify the Packet.
+	 * @param p DatagramPacket which will be verified
+	 * 
+	 * @since May 13 2014
+	 * 
+	 * Latest Change: Added length of packet
+	 * @version May 17 2014
+	 * @author Colin
+	 * 
+	 */
+	private Request verifyReadWrite(DatagramPacket p) {
+		Request r;
+		if(p.getData()[0] != (byte)0)
+			System.exit(1); // TODO properly handle error
+		if(p.getData()[1] == (byte)1)
+		{
+			r = Request.READ;
+			return r;
+		}
+		else if(p.getData()[1] == (byte)2)
+		{
+			r = Request.WRITE;
+			return r;
+		}
+		r = Request.ERROR;
+		return r;
+	} // end method
 	
 	/**
 	 * The main class for the Error Simulator
@@ -177,7 +206,7 @@ public class ErrorSim {
 			System.out.println ("Error Simulator will shut down");
 			System.exit(0);
 		}
-		ErrorSim esim = new ErrorSim(true, userChoice);
+		ErrorSim esim = new ErrorSim(true);
 		
 		// close the Scanner
 		in.close();
