@@ -19,10 +19,6 @@ import java.awt.event.*;
  */
 public class ClientUI {
 	
-	private static Request req;
-	private static int exit;
-	private static Scanner in;
-	
 	/**
 	 * Main method for the Client User Interface
 	 * @param args not used
@@ -32,116 +28,48 @@ public class ClientUI {
 	 * Latest Change: Added User Interface
 	 * @version May 21 2014
 	 * @author Kais
+	 * @throws IOException 
+	 * @throws NumberFormatException 
 	 * 
 	 */
-	public static void main(String[] args) {
-		in = new Scanner(System.in);
-		exit = 0;
-		//String directory;
-		//String filename;
-		/*
-		do {
-			System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
-			rw = in.nextInt();
-		} while (rw != 1 && rw != 2); // end do while
-		*/
-		do {
-		final JFrame buttonFrame = new JFrame("Read or Write");
-		JButton readButton = new JButton("Read");
-		JButton writeButton = new JButton("Write");
-		exit = 0;
+	public static void main(String[] args) throws NumberFormatException, IOException {
+		BufferedReader br = new BufferedReader( new InputStreamReader(System.in));
+		int exit = 0;
+		String directory = null;
+		String filename = null;
+		int rw;
 		
-		readButton.addActionListener(new ActionListener() {
-			 
-         	public void actionPerformed(ActionEvent e) {
-         		req = Request.READ;
-    			System.out.println("Please select the file you wish to read you wish to write to");
-    			final JFrame frame = new JFrame("Folder Selector");
-    			File serverLocation = new File(System.getProperty("user.dir") + "\\Server");
-    			FileSystemView fsv = new SingleRootFileSystemView(serverLocation);
-    			final JFileChooser chooser = new JFileChooser(fsv);
-    			System.out.println(serverLocation.getAbsolutePath());
-    			//chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-    			JButton btn1 = new JButton("Show Open Dialog");
-    			btn1.addActionListener(new ActionListener() {
-    				 
-    	            public void actionPerformed(ActionEvent e) {
-    	                int retVal = chooser.showOpenDialog(frame);
-    	                if (retVal == JFileChooser.APPROVE_OPTION) {
-    	                	File file = chooser.getSelectedFile();
-    	                	frame.dispose();
-    	                	Thread client = new Client(file.getName(), req);
-    	                	System.out.println("Would you like to perform another read or write? (1 - yes, anything else - no)");
-    	                    exit = in.nextInt();
-    	                }
-    	 
-    	            }
-    	        });
-    			Container pane = frame.getContentPane();
-    	        pane.setLayout(new GridLayout(1, 1, 10, 10));
-    	        pane.add(btn1);
-    	 
-    	        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    	        frame.setSize(300, 200);
-    	        frame.setVisible(true);
-         		buttonFrame.dispose();
-            }
-        });
-		writeButton.addActionListener(new ActionListener() {
-			 
-         	public void actionPerformed(ActionEvent e) {
-         		req = Request.WRITE;
-    			System.out.println("Please select the file you which to write to the server");
-    			final JFrame frame = new JFrame("File Selector");
-    			final JFileChooser chooser = new JFileChooser();
-    			JButton btn1 = new JButton("Show Open Dialog");
-    			btn1.addActionListener(new ActionListener() {
-    			 
-    				public void actionPerformed(ActionEvent e) {
-    					int retVal = chooser.showOpenDialog(frame);
-    					if (retVal == JFileChooser.APPROVE_OPTION) {
-    						File directory = chooser.getCurrentDirectory();
-    						File file = chooser.getSelectedFile();
-    						String filename = file.getName();
-    						//System.out.println(directory.getAbsolutePath());
-    						//System.out.println(filename);
-    						frame.dispose();
-    						Thread client = new Client(filename, directory.getAbsolutePath(), req);
-    						System.out.println("Would you like to perform another read or write? (1 - yes, anything else - no)");
-    				        exit = in.nextInt();
-    					}
-     
-    				}
-    			});
-    			Container pane = frame.getContentPane();
-    			pane.setLayout(new GridLayout(1, 1, 10, 10));
-    			pane.add(btn1);
-     
-    			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    			frame.setSize(300, 200);
-    			frame.setVisible(true);
-         		buttonFrame.dispose();
-            }
-        });
-		Container rwpane = buttonFrame.getContentPane();
-		rwpane.setLayout(new GridLayout(2, 1, 10, 10));
-		rwpane.add(readButton);
-        rwpane.add(writeButton);
- 
-        buttonFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        buttonFrame.setSize(300, 200);
-        buttonFrame.setVisible(true);
-        
-        while(exit == 0){ 
-        	try {
-        		Thread.currentThread().sleep(10);
-        	} catch (InterruptedException e1) {
-        		// TODO Auto-generated catch block
-        		e1.printStackTrace();
-        	} 
-        }
-		} while (exit == 1);
-        
+		do {
+			do {
+				System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
+				rw = Integer.parseInt(br.readLine());
+			} while (rw != 1 && rw != 2); // end do while
+		
+			if (rw == 1) {
+				System.out.println("What is the name of the file you wish to read from the server? (i.e. 'Test.txt')");
+				filename = br.readLine();
+				System.out.println("Which directory would you like to save this file into? (i.e. 'C:\\Users\\Kais\\git\\TFTP')");
+				directory = br.readLine();
+				Thread client = new Client(filename, directory, Request.READ);
+				client.start();
+				while (client.getState() != Thread.State.TERMINATED) {
+					
+				}
+			}
+			else if (rw == 2) {
+				System.out.println("What is the name of the file you wish to write to the server? (i.e. 'Test.txt')");
+				filename = br.readLine();
+				System.out.println("Which directory is this file located in? (i.e. 'C:\\Users\\Kais\\git\\TFTP')");
+				directory = br.readLine();
+				Thread client = new Client(filename, directory, Request.WRITE);
+				client.start();
+				while (client.getState() != Thread.State.TERMINATED) {
+					
+				}
+			}
+			System.out.println("Would you like to invoke another read or write? (0 - Yes, anything else - No)");
+			exit = Integer.parseInt(br.readLine());
+		} while (exit == 0); // end do while
 	} // end method
 
 } // end class

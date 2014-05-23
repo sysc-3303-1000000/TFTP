@@ -8,36 +8,44 @@ import java.util.*;
  * @since May 11 2014
  * 
  * @author 1000000
- * @version May 17 2014
+ * @version May 21 2014
  *
  */
-public class Client {
+public class Client extends Thread {
 	public static final byte zero = (byte)0;
 	public static final byte one = (byte)1;
 	public static final byte two = (byte)2;	
 	
 	private DatagramSocket sendReceiveSocket; // Socket used to send and receive packets
 	private DatagramPacket sendPacket, receivePacket, sendData; // Packets used to send an receive information
-	private String filenameString, modeString;
+	private String filenameString, modeString; // filename will be user input, while mode will remain hardcoded for now
+	private String directory;
 	private byte filenameBytes[], modeBytes[];
 	private byte[] ackNumber = new byte[2];
 	private byte[] dataNumber = new byte[2];
-	private int blockNum, ackNum;
+	private int blockNum, ackNum; // the current datablock number and ack block number
 
-	private static byte readMsg[];
-	private static byte writeMsg[];
-	
+	private byte message[];
+	private Request req;
+
 	/**
-	 * The following is the constructor for Client
+	 * The following is the constructor for the Client
+	 * @param filename the file we are going to read from the server or write to on our side
+	 * @param path the path of the file we are going to write to on our side or the path to place the file we are reading from the server
+	 * @param req whether it is a read or write request
 	 * 
-	 * @since May 11 2014
+	 * @since May 22 2014
 	 * 
-	 * Latest Change: Added Code from assignment 1
-	 * @version May 15 2014
-	 * @author Moh
+	 * Latest Change: Added implementation
+	 * @version May 22 2014
+	 * @author Kais
 	 * 
 	 */
-	public Client(){
+	public Client(String filename, String path, Request req) {
+		
+		directory = path;
+		filenameString = filename;
+		this.req = req;
 		
 		// initialize the DatagramSocket sendReceive to bind to any available port
 		try {
@@ -47,21 +55,20 @@ public class Client {
 			System.err.println("Socket exception error: " + se.getMessage());
 		} // end catch
 		
+		filenameBytes = filename.getBytes();
+		
 		// initialize the String variables that will be passed onto the program
-		filenameString = "moh.txt";
 		modeString = "netascii";
 		
 		// change string values to bytes
-		filenameBytes = filenameString.getBytes();
 		modeBytes = modeString.getBytes();
 		
-		// initialize the messages
-		readMsg = createMsg(one, filenameBytes, modeBytes);
-		writeMsg = createMsg(two, filenameBytes, modeBytes);
-
-		
+		if (req == Request.READ)
+			message = createMsg(one, filenameBytes, modeBytes);
+		else if (req == Request.WRITE)
+			message = createMsg(two, filenameBytes, modeBytes);
 	} // end constructor
-
+	
 	/**
 	 * Send and receive procedure for the packet
 	 * this procedure will also be able to accept a request depending on its arguments
@@ -74,13 +81,13 @@ public class Client {
 	 * @author Kais
 	 * 
 	 */
-	private void sendReceive(byte[] rqstMsg, Request req)
+	private void sendReceive(Request req)
 	{		
 		System.out.println("Client has started...");
 				
 		// send the packet to well-known port 68
 		try {
-			sendPacket = new DatagramPacket(rqstMsg, rqstMsg.length, InetAddress.getLocalHost(), 68);
+			sendPacket = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), 68);
 		} // end try
 		catch (UnknownHostException uhe) {
 			System.err.println("Unknown host exception error: " + uhe.getMessage());
@@ -116,16 +123,18 @@ public class Client {
 		
 		// prints out the information on the received packet
 		printInformation(receivePacket);
-		System.out.println("Client packet received..");	
+		System.out.println("Client packet received..");
+		System.out.println(req);
 		
-		if(req == Request.READ) {
+		if (req == Request.READ) { // if request was a read
+			System.out.println("In Read");
 			byte dat[] = receivePacket.getData();
 			byte ack[] = new byte[4];
 			dataNumber[0] = (byte)0;
 			dataNumber[1] = (byte)1;
 			blockNum = 1;
 			ackNum = 1;
-			while(verifydata(dataNumber, receivePacket)) {
+			while(verifydata(dataNumber, receivePacket)) { // make sure the data block number we were supposed to receive is the right one
 				ack[0] = (byte)0;
 				ack[1] = (byte)4;
 				ack[2] = (byte)((ackNum - (ackNum % 256))/256);
@@ -143,7 +152,7 @@ public class Client {
 			} // end catch
 			
 			try {// create the acknowledge packet to send back to the client
-				sendData = new DatagramPacket(ack, 4, InetAddress.getLocalHost(), 68);
+				sendData = new DatagramPacket(ack, 4, InetAddress.getLocalHost(), receivePacket.getPort());
 			} // end try
 			catch (UnknownHostException uhe) {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
@@ -154,7 +163,9 @@ public class Client {
 			catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
 			} // end catch
-			if (dat.length < 516) {
+			System.out.println("Sent ack packet");
+			printInformation(sendData);
+			if (receivePacket.getLength() < 516) {
 				break;
 			} // end if
 			
@@ -169,12 +180,12 @@ public class Client {
 				System.err.println("IO Exception error: " + ioe.getMessage());
 			} // end catch
 			dataNumber[1] = (byte)(dataNumber[1]+(byte)1);
-			ackNum++;
-			blockNum++;
-			dat = rly;
+			ackNum++; // next ack
+			blockNum++; // next block
+			dat = rly; // new dat will be the data from the packet just received
 			} // end whileloop
 		} // end if
-		else if (req == Request.WRITE) {
+		else if (req == Request.WRITE) { // if request was a write
 			ackNumber[0] = (byte)0;
 			ackNumber[1] = (byte)0;
 			blockNum = 1;
@@ -209,7 +220,7 @@ public class Client {
 				System.arraycopy(fileData, 0, data, 4, fileData.length);
 				   
 				try {
-					sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), 68);
+					sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), receivePacket.getPort());
 				} // end try
 				catch (UnknownHostException uhe) {
 					System.err.println("Unknown host exception error: " + uhe.getMessage());
@@ -257,7 +268,7 @@ public class Client {
 	private byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
 		
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + filenameString));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(directory + "\\" + filenameString));
 
 		byte[] data = new byte[512];
 		int i = 0;
@@ -298,7 +309,7 @@ public class Client {
 	 */
 	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\output" + filenameString, (blockNum > 1) ? true : false));
+		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(directory + "\\output" + filenameString, (blockNum > 1) ? true : false));
 		out.write(writeData, 0, writeData.length);
 		out.close();
 
@@ -429,22 +440,7 @@ public class Client {
 		return msg;
 	} // end forloop
 	
-	/**
-	 * Main method for the Client
-	 * @param args not used
-	 * 
-	 * @since May 11 2014
-	 * 
-	 * Latest Change: Changed for Iteration 1
-	 * @version May 20 2014
-	 * @author Kais
-	 * 
-	 */
-	public static void main(String[] args) {
-		Client client = new Client();
-		client.sendReceive(readMsg, Request.READ);
-		//client.sendReceive(writeMsg, Request.WRITE);
-
-	} // end method
-	
+	public void run() {
+		sendReceive(req);
+	}
 } // end class

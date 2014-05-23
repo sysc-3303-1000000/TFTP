@@ -248,7 +248,7 @@ public class ConnectionManager extends Thread {
 	public byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
 		
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\" + fileName));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\Server\\" + fileName));
 
 		byte[] data = new byte[512];
 		int i = 0;
