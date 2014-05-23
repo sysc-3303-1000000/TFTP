@@ -225,7 +225,8 @@ public class Client extends Thread {
 				catch (UnknownHostException uhe) {
 					System.err.println("Unknown host exception error: " + uhe.getMessage());
 				} // end catch
-				   
+				System.out.println("created the following data packet to send off");
+				printInformation(sendData);
 				try {
 					sendReceiveSocket.send(sendData);
 				} // end try
@@ -245,6 +246,8 @@ public class Client extends Thread {
 				} // end catch
 				ackNumber[1] = (byte)(ackNumber[1]+(byte)1);
 				blockNum++;
+				System.out.println("Client just received ack packet from server");
+				printInformation(receivePacket);
 					
 			} // end whileloop
 		} // end if
