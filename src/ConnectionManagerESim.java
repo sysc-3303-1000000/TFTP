@@ -9,7 +9,7 @@ import java.net.*;
  * @since May 16 2014
  * 
  * @author 1000000
- * @version May  2014
+ * @version May 23 2014
  *
  */
 public class ConnectionManagerESim extends Thread {
@@ -19,7 +19,7 @@ public class ConnectionManagerESim extends Thread {
 	
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
 	private DatagramSocket sendReceiveSocket, sendSocket; // socket deceleration for all three required sockets 
-	private DatagramPacket sendClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
+	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
 	private boolean verbose;
 	private byte data[];
 	private int port;
@@ -67,6 +67,7 @@ public class ConnectionManagerESim extends Thread {
 			System.err.println("SocketException: " + se.getMessage());
 		} // end catch
 		
+		System.out.println("ConnectionManagerESim Thread started to service request!");
 	} // end constructor
 	
 	/**
@@ -83,7 +84,7 @@ public class ConnectionManagerESim extends Thread {
 	private void printInformation(DatagramPacket p) {
 		
 		// print out the information on the packet
-		System.out.println("******************************************************");
+		System.out.println("PACKET INFORMATION:");
 		System.out.println("Host: " + p.getAddress());
 		System.out.println("Host port: " + p.getPort());
 		System.out.println("Containing the following \nString: " + new String(p.getData()));
@@ -92,6 +93,7 @@ public class ConnectionManagerESim extends Thread {
 		for (int i = 0; i < p.getLength(); i++) {
 			System.out.print(Integer.toHexString(p.getData()[i]));
 		} // end forloop
+		System.out.println("\n******************************************************");
 		System.out.println("\n\n");
 	} // end method
 	
@@ -136,8 +138,29 @@ public class ConnectionManagerESim extends Thread {
 	 */
 	private void normalOp() 
 	{
+		System.out.println("ConnectionManagerESim: Running Normal Operation\n");
 		while(true)
 		{
+			System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
+			
+			// this is not the first packet, we need to wait for the client to send back to us
+			if (!firstPacket) {
+				try { // wait to receive client packet
+					sendReceiveSocket.receive(receiveClientPacket);
+				}//end try 
+				catch (IOException ie) {
+					System.err.println("IOException error: " + ie.getMessage());
+				}//end catch
+				
+				System.out.println("ConnectionManagerESim: Received packet from client");
+				printInformation(receiveClientPacket);
+				// updating the data and length in the packet being sent to the server
+				data = receiveClientPacket.getData();
+				length = receiveClientPacket.getLength();
+				
+			}//end if
+			
+			System.out.println("ConnectionManageESim: Received packet from client. Preparing packet to send to Server");
 			// prepare the new send packet to the server
 			try {
 				sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
@@ -177,7 +200,8 @@ public class ConnectionManagerESim extends Thread {
 			
 			receiveServerPacket = new DatagramPacket(response, response.length);
 			
-			System.out.println("ErrorSim is waiting to receive a packet from server...\n");
+			System.out.println("******************************************************");
+			System.out.println("ConnectrionManagerESim: waiting to receive a packet from server...\n");
 			
 			// block until you receive a packet from the server
 			try {
@@ -203,7 +227,7 @@ public class ConnectionManagerESim extends Thread {
 		        System.exit(1);
 			} // end catch
 			System.out.println("ErrorSim will attempt to send response back to client...\n");
-			
+
 			if(verbose) // print out information about the packet being sent to the client
 				printInformation(sendClientPacket);
 			
