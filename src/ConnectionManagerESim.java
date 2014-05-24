@@ -25,10 +25,12 @@ public class ConnectionManagerESim extends Thread {
 	private int port;
 	private int length;
 	private int mode;	// will have the value of the current error simulation mode 
+	//private int numberOfTimeouts; // keeps tracks of the number of timeouts 
 	private Request requestType;
 	private boolean lastPacketWrite = false;
 	private boolean lastPacketRead = false;
 	private boolean firstPacket = true;
+	private boolean end = false;
 	
 	/**
 	 * The following is the constructor for ListenerESim
@@ -51,7 +53,7 @@ public class ConnectionManagerESim extends Thread {
 		this.length = length;
 		this.mode = userChoice;
 		this.requestType = requestType;
-		
+		//this.numberOfTimeouts = 0;
 		try {
 			sendReceiveSocket = new DatagramSocket();
 		} // end try 
@@ -103,27 +105,35 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 16 2014
 	 * 
-	 * Latest Change: Run method added, full implementation added
-	 * @version May 16 2014
+	 * Latest Change: added the loop to keep the thread alive until exit
+	 * @version May 24 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 * 
 	 */
 	public void run() {
-		if (mode == 0)
-		{
-			normalOp();	//Runs the Error Sim normally (ie. No errors)
-		}
-		else if (mode == 1)
-		{
-			lostOp();
-		}
-		else if (mode == 2)
-		{
-			delayedOp();
-		}
-		else if (mode == 3) {
-			duplicatedOp();
-		}
+		
+		while (!end) {
+			if (mode == 0)
+			{
+				end = normalOp();	//Runs the Error Sim normally (ie. No errors)
+			}
+			else if (mode == 1)
+			{
+				end = lostOp();
+			}
+			else if (mode == 2)
+			{
+				end = delayedOp();
+			}
+			else if (mode == 3) {
+				end = duplicatedOp();
+			}
+		}//end while
+		
+		// begin closing operations
+		System.out.println("ConnectionManagerESim: ErrorSim is now closiong its sockets");
+		sendReceiveSocket.close();
+		sendSocket.close();
 	} // end method
 	
 	/**
@@ -136,130 +146,127 @@ public class ConnectionManagerESim extends Thread {
 	 * @version May 21 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */
-	private void normalOp() 
+	private boolean normalOp() 
 	{
 		System.out.println("ConnectionManagerESim: Running Normal Operation\n");
-		while(true)
-		{
-			System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
-			
-			// this is not the first packet, we need to wait for the client to send back to us
-			if (!firstPacket) {
-				byte rly[] = new byte[DATA_SIZE];
-				receiveClientPacket = new DatagramPacket(rly, rly.length);
-				try { // wait to receive client packet
-					sendSocket.receive(receiveClientPacket);
-				}//end try 
-				catch (IOException ie) {
-					System.err.println("IOException error: " + ie.getMessage());
-				}//end catch
-				
-				System.out.println("ConnectionManagerESim: Received packet from client");
-				printInformation(receiveClientPacket);
-				// updating the data and length in the packet being sent to the server
-				data = receiveClientPacket.getData();
-				length = receiveClientPacket.getLength();
-				
-			}//end if
-			
-			System.out.println("ConnectionManageESim: Received packet from client. Preparing packet to send to Server");
-			// prepare the new send packet to the server
-			try {
-				sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
-			} // end try 
-			catch (UnknownHostException uhe) {
-				System.err.println("Unknown host exception error: " + uhe.getMessage());
-			} // end catch
-			
-			if(verbose)
-				printInformation(sendServerPacket);
-			
-			// send the packet to the server via the send/receive socket to server port
-		    try {
-		       sendReceiveSocket.send(sendServerPacket);
-		    } // end try 
-		    catch (IOException ioe) {
-		    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		    } // end catch
-		    
-		    // print confirmation message that the packet has been sent to the server
-			System.out.println("Packet sent to server");
-			if (lastPacketRead == true)	
-			{
-				break;	// Last packet is now sent. The thread will close
-			}
-			if (requestType == Request.WRITE && !firstPacket)
-			{
-				if(sendServerPacket.getLength() < DATA_SIZE)
-				{
-					lastPacketWrite = true;	
-				}
-			}
-			
-			//*********************************************************************************
-			
-			byte response[] = new byte[DATA_SIZE];
-			
-			receiveServerPacket = new DatagramPacket(response, response.length);
-			
-			System.out.println("******************************************************");
-			System.out.println("ConnectrionManagerESim: waiting to receive a packet from server...\n");
-			
-			// block until you receive a packet from the server
-			try {
-				sendReceiveSocket.receive(receiveServerPacket);
-			} // end try 
-			catch (IOException ioe) {
-				System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			} // end catch
-			
-			response = receiveServerPacket.getData();
-			if(verbose) // print out information about the packet received from the server if verbose
-				printInformation(receiveServerPacket);
-			
-			// set the serverPort to the port we have just received it from (meaning to the Server Thread that will deal with this request
-			serverPort = receiveServerPacket.getPort();
-			
-			// prepare the new send packet to the client
-			try {
-				sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), port);
-			} // end try
-			catch (UnknownHostException uhe) {
-				uhe.printStackTrace();
-		        System.exit(1);
-			} // end catch
-			System.out.println("ErrorSim will attempt to send response back to client...\n");
 
-			if(verbose) // print out information about the packet being sent to the client
-				printInformation(sendClientPacket);
-			
-		    // send the packet to the client via the send socket 
-		    try {
-		       sendSocket.send(sendClientPacket);
-		       
-		    } // end try 
-		    catch (IOException ioe) {
-		    	System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		    } // end catch
-		    
-		    // print confirmation message that the packet has been sent to the client
-			System.out.println("Response packet sent to client");
-			firstPacket = false;		// any following packets the connection manager receives will be not the second packet
-			if (lastPacketWrite == true)
-			{
-				break;	// Last packet is now sent. The thread will close
-			}
-			if (requestType == Request.READ && !firstPacket)	
-			{
-				if(sendClientPacket.getLength() < DATA_SIZE)
-				{
-					lastPacketRead = true;
-				}
-			}	
+		System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
+
+		// this is not the first packet, we need to wait for the client to send back to us
+		if (!firstPacket) {
+			byte rly[] = new byte[DATA_SIZE];
+			receiveClientPacket = new DatagramPacket(rly, rly.length);
+			try { // wait to receive client packet
+				sendSocket.receive(receiveClientPacket);
+			}//end try 
+			catch (IOException ie) {
+				System.err.println("IOException error: " + ie.getMessage());
+			}//end catch
+
+			System.out.println("ConnectionManagerESim: Received packet from client");
+			printInformation(receiveClientPacket);
+			// updating the data and length in the packet being sent to the server
+			data = receiveClientPacket.getData();
+			length = receiveClientPacket.getLength();
+
+		}//end if
+
+		System.out.println("ConnectionManageESim: Received packet from client. Preparing packet to send to Server");
+		// prepare the new send packet to the server
+		try {
+			sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
+		} // end try 
+		catch (UnknownHostException uhe) {
+			System.err.println("Unknown host exception error: " + uhe.getMessage());
+		} // end catch
+
+		if(verbose)
+			printInformation(sendServerPacket);
+
+		// send the packet to the server via the send/receive socket to server port
+		try {
+			sendReceiveSocket.send(sendServerPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		// print confirmation message that the packet has been sent to the server
+		System.out.println("Packet sent to server");
+		if (lastPacketRead == true)	
+		{
+			return true;	// Last packet is now sent. The thread will close
 		}
-		System.out.println("The Connection Manager for ErrorSim is now closed");
-		sendReceiveSocket.close();
-		sendSocket.close();
+		if (requestType == Request.WRITE && !firstPacket)
+		{
+			if(sendServerPacket.getLength() < DATA_SIZE)
+			{
+				lastPacketWrite = true;	
+			}
+		}
+
+		//*********************************************************************************
+
+		byte response[] = new byte[DATA_SIZE];
+
+		receiveServerPacket = new DatagramPacket(response, response.length);
+
+		System.out.println("******************************************************");
+		System.out.println("ConnectrionManagerESim: waiting to receive a packet from server...\n");
+
+		// block until you receive a packet from the server
+		try {
+			sendReceiveSocket.receive(receiveServerPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		response = receiveServerPacket.getData();
+		if(verbose) // print out information about the packet received from the server if verbose
+			printInformation(receiveServerPacket);
+
+		// set the serverPort to the port we have just received it from (meaning to the Server Thread that will deal with this request
+		serverPort = receiveServerPacket.getPort();
+
+		// prepare the new send packet to the client
+		try {
+			sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), port);
+		} // end try
+		catch (UnknownHostException uhe) {
+			uhe.printStackTrace();
+			System.exit(1);
+		} // end catch
+		System.out.println("ErrorSim will attempt to send response back to client...\n");
+
+		if(verbose) // print out information about the packet being sent to the client
+			printInformation(sendClientPacket);
+
+		// send the packet to the client via the send socket 
+		try {
+			sendSocket.send(sendClientPacket);
+
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		// print confirmation message that the packet has been sent to the client
+		System.out.println("Response packet sent to client");
+		firstPacket = false;		// any following packets the connection manager receives will be not the second packet
+		if (lastPacketWrite == true)
+		{
+			return true;	// Last packet is now sent. The thread will close
+		}
+		if (requestType == Request.READ && !firstPacket)	
+		{
+			if(sendClientPacket.getLength() < DATA_SIZE)
+			{
+				lastPacketRead = true;
+			}
+		}
+			
+			return false;
 	}
 	
 	/**
@@ -269,20 +276,22 @@ public class ConnectionManagerESim extends Thread {
 	 * @since May 21 2014
 	 * 
 	 * Latest Change: Run with lost packets method added, full implementation added
-	 * @version May 21 2014
+	 * @version May 24 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 * 
 	 */
-	private void lostOp()
+	private boolean lostOp()
 	{
 		double rando = randoNum();	//Random number from 1-10
 		if(rando <= PERCENTPASS)	//Check if the Random number is less than the percent pass
 		{
-			normalOp();
+			System.out.println("Lost packet will not be simulated, normal operation will continue");
+			return normalOp();
 		}
 		else
 		{
 			System.out.println("Lost packet is simulated");
+			return false;
 		}
 	}
 	
@@ -291,25 +300,28 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: Run with Delayed packets method added, full implementation added
-	 * @version May 21 2014
+	 * Latest Change: Increased possible delay and made it to return the boolean value
+	 * @version May 24 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */
-	private void delayedOp()
+	private boolean delayedOp()
 	{
 		double rando = randoNum();	//Random number from 1-10
 		if(rando <= PERCENTPASS)	//Check if the Random number is less than the percent pass
 		{
-			normalOp();	//Normal forward operation
+			System.out.println("Delayed packet will not be simulated, normal operation will continue");
+			return normalOp();	//Normal forward operation
 		}
 		else
 		{
+			System.out.println("Packet will be delayed. Thread will sleep now");
 			try {
-                Thread.sleep(TIMEOUT, (int)(rando*1000));	//delays the packet for the timeout period plus a random amount. 
+                Thread.sleep(TIMEOUT + (int)(3*rando*100));	//delays the packet for the timeout period plus a random amount. 
             } catch (InterruptedException e)
             {}
-			System.out.println("*************Packet was delayed by: " + (TIMEOUT + (rando*1000)) + "!************");
-			normalOp();
+			System.out.println("*************Packet was delayed by: " + (TIMEOUT + (3*rando*100)) + "!************");
+			System.out.println("Normal operation will continue now");
+			return normalOp();
 		}
 	}
 	
@@ -326,17 +338,39 @@ public class ConnectionManagerESim extends Thread {
 	 * @version May 21 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong  
 	 */
-	private void duplicatedOp()
+	private boolean duplicatedOp()
 	{
 		double rando = randoNum();	//Random number from 1-10
 		if(rando <= PERCENTPASS) {	//Check if the Random number is less than the percent pass
 			// normal operation
-			normalOp();
+			System.out.println("Duplicate packet will not be simulated, normal operation will continue");
+			return normalOp();
 		}
 		else {
+			System.out.println("Duplicate packet will be simulated");
 			// generate a random number to see if we duplicate client or server
 			double duplicate = randoNum(); // Random number from 1-10;
-			// sending a duplicate packet to the server
+			// this is not the first packet, we need to wait for the client to send back to us
+			if (!firstPacket) {
+				byte rly[] = new byte[DATA_SIZE];
+				receiveClientPacket = new DatagramPacket(rly, rly.length);
+				try { // wait to receive client packet
+					sendSocket.receive(receiveClientPacket);
+				}//end try 
+				catch (IOException ie) {
+					System.err.println("IOException error: " + ie.getMessage());
+				}//end catch
+
+				System.out.println("ConnectionManagerESim: Received packet from client");
+				printInformation(receiveClientPacket);
+				// updating the data and length in the packet being sent to the server
+				data = receiveClientPacket.getData();
+				length = receiveClientPacket.getLength();
+
+			}//end if
+
+			System.out.println("ConnectionManageESim: Received packet from client. Preparing packet to send to Server");
+			// prepare the new send packet to the server
 			try {
 				sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
 			} // end try 
@@ -353,25 +387,38 @@ public class ConnectionManagerESim extends Thread {
 				
 				// if the number generated for duplicate is <= 5, send the server packet twice 
 				if (duplicate <= 5) {
-					
+					System.out.println("The packet being sent to the server will be duplicated");
 					try {
 						Thread.sleep((int)(rando*100));
 					} catch (InterruptedException e) {}
 					sendReceiveSocket.send(sendServerPacket);				
 				} // end try 
-				
 			} catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
 			} // end catch
 
 			// print confirmation message that the packet has been sent to the server
 			System.out.println("Packet sent to server");
+			if (lastPacketRead == true)	
+			{
+				return true;	// Last packet is now sent. The thread will close
+			}
+			if (requestType == Request.WRITE && !firstPacket)
+			{
+				if(sendServerPacket.getLength() < DATA_SIZE)
+				{
+					lastPacketWrite = true;	
+				}
+			}
+
+			//*********************************************************************************
 
 			byte response[] = new byte[DATA_SIZE];
 
 			receiveServerPacket = new DatagramPacket(response, response.length);
 
-			System.out.println("ErrorSim is waiting to receive a packet from server...\n");
+			System.out.println("******************************************************");
+			System.out.println("ConnectrionManagerESim: waiting to receive a packet from server...\n");
 
 			// block until you receive a packet from the server
 			try {
@@ -407,10 +454,11 @@ public class ConnectionManagerESim extends Thread {
 
 				// if the number generated for duplicate is > 5, send the client packet twice 
 				if (duplicate > 5) {
+					System.out.println("The packet being sent to the client will be duplicated");
 					try {
 						Thread.sleep((int)(rando*100));
 					} catch (InterruptedException e) {}
-					sendReceiveSocket.send(sendServerPacket);				
+					sendReceiveSocket.send(sendClientPacket);				
 				} // end try 
 			} catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
@@ -418,11 +466,21 @@ public class ConnectionManagerESim extends Thread {
 
 			// print confirmation message that the packet has been sent to the client
 			System.out.println("Response packet sent to client");
+			firstPacket = false;		// any following packets the connection manager receives will be not the second packet
+			if (lastPacketWrite == true)
+			{
+				return true;	// Last packet is now sent. The thread will close
+			}
+			if (requestType == Request.READ && !firstPacket)	
+			{
+				if(sendClientPacket.getLength() < DATA_SIZE)
+				{
+					lastPacketRead = true;
+				}
+			}
 
-			sendReceiveSocket.close();
-			sendSocket.close();
+			return false;
 		}
-
 	}
 
 	/**

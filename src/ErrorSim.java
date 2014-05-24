@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.net.*;
-import java.io.*;
 import java.util.Scanner;
 
 /**
@@ -21,7 +20,7 @@ public class ErrorSim {
 	public static final int DATA_SIZE = 516;
 	
 	// declare socket
-	private DatagramSocket receiveSocket;
+	private static DatagramSocket receiveSocket;
 	
 	// declare the packet
 	private DatagramPacket receiveClientPacket;
@@ -104,38 +103,41 @@ public class ErrorSim {
 	 */	
 	public void sendReceive(){
 		if (userChoice == 0) {
-				System.out.println("ErrorSim will be running in Normal mode");
-			}
-			
-			else if (userChoice == 1) {
-				System.out.println("ErrorSim will be running in Lost packet mode");
-			}
-			
-			else if (userChoice == 2) {
-				System.out.println("ErrorSim will be running in Delayed packet mode");
+			System.out.println("ErrorSim will be running in Normal mode");
+		}
 
-			}
-			
-			else if (userChoice == 3) {
-				System.out.println("ErrorSim will be running in Duplicate packet mode");
-			}
-			System.out.println("Error Simulator is waiting for new client request!");
-			
-		for(;;) 
-		{
-			try { // wait to receive the packet from client
-				receiveSocket.receive(receiveClientPacket);
-			} // end try 
-			catch (IOException ie) {
-				System.err.println("IOException error: " + ie.getMessage());
-			} // end catch
-								
-			if(verbose)
-				printPacketInfo(receiveClientPacket);
-				
-			Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
-			connectionmanager.start();
-		} // end forloop
+		else if (userChoice == 1) {
+			System.out.println("ErrorSim will be running in Lost packet mode");
+		}
+
+		else if (userChoice == 2) {
+			System.out.println("ErrorSim will be running in Delayed packet mode");
+
+		}
+
+		else if (userChoice == 3) {
+			System.out.println("ErrorSim will be running in Duplicate packet mode");
+		}
+		
+		System.out.println("Error Simulator is waiting for new client request!");
+
+		try { // wait to receive the packet from client
+			receiveSocket.receive(receiveClientPacket);
+		} // end try 
+		catch (IOException ie) {
+			System.err.println("IOException error: " + ie.getMessage());
+		} // end catch
+
+		if(verbose)
+			printPacketInfo(receiveClientPacket);
+
+		Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
+		connectionmanager.start();
+
+		while (connectionmanager.getState() != Thread.State.TERMINATED) {
+
+		}
+
 	}
 	
 	/**
@@ -183,33 +185,40 @@ public class ErrorSim {
 		
 		// will hold the value if a valid choice has been entered
 		boolean validChoice = false;
+		boolean shutdown = false;
 		
-		while (!validChoice) {
+		while (!shutdown) { 
+			while (!validChoice) {
+				
+				// print out information for the user depending on the mode of run they want to use
+				System.out.println("0 - Normal\n1 - Lose a packet\n2 - Delay a packet\n3 - Duplicate\n9 - Shutdown\n\n");
+				System.out.println("Please enter a mode for the Error Simulator to start in:");
+				
+				userChoice = in.nextInt();
+				// check if a valid choice has been entered
+				if (userChoice == 0 || userChoice == 1 || userChoice == 2 || userChoice == 3 || userChoice == 9) {
+					validChoice = true;
+				}
+				else {
+					System.out.println("Invalid choice entered. Please try again!");
+					validChoice = false;
+				}
+			} // end while
 			
-			// print out information for the user depending on the mode of run they want to use
-			System.out.println("0 - Normal\n1 - Lose a packet\n2 - Delay a packet\n3 - Duplicate\n9 - Shutdown\n\n");
-			System.out.println("Please enter a mode for the Error Simulator to start in:");
-			
-			userChoice = in.nextInt();
-			// check if a valid choice has been entered
-			if (userChoice == 0 || userChoice == 1 || userChoice == 2 || userChoice == 3 || userChoice == 9) {
-				validChoice = true;
+			// shutdown the listener 
+			if (userChoice == 9) {
+				shutdown = true;
 			}
-			else {
-				System.out.println("Invalid choice entered. Please try again!");
-				validChoice = false;
-			}
-		}
-		
-		// shutdown the listener 
-		if (userChoice == 9) {
-			System.out.println ("Error Simulator will shut down");
-			System.exit(0);
-		}
-		ErrorSim esim = new ErrorSim(true);
+			ErrorSim esim = new ErrorSim(true);
+
+			esim.sendReceive();
+			validChoice = false;
+			receiveSocket.close();
+		}// end while	
 		
 		// close the Scanner
 		in.close();
-		esim.sendReceive();
+		System.out.println ("Error Simulator will shut down");
+		System.exit(0);
 	} // end method
 } // end class
