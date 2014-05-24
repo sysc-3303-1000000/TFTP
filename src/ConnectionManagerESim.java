@@ -14,15 +14,15 @@ import java.net.*;
  */
 public class ConnectionManagerESim extends Thread {
 	public static final int DATA_SIZE = 516;
-	public static final int PERCENTPASS = 0;	//int value 0-10 (0 being 100 fail rate)
+	public static final int PERCENTPASS = 9;	//int value 0-10 (0 being 100 fail rate)
 	public static final long TIMEOUT = 3000;		//int value in miliseconds 
 	
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
-	private DatagramSocket sendReceiveSocket, sendSocket; // socket deceleration for all three required sockets 
+	private DatagramSocket serverSocket, clientSocket; // socket deceleration for all three required sockets 
 	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
 	private boolean verbose;
 	private byte data[];
-	private int port;
+	private int clientPort;
 	private int length;
 	private int mode;	// will have the value of the current error simulation mode 
 	//private int numberOfTimeouts; // keeps tracks of the number of timeouts 
@@ -49,13 +49,13 @@ public class ConnectionManagerESim extends Thread {
 	public ConnectionManagerESim(boolean verbose, int userChoice, byte[] data, int port, int length, Request requestType) {
 		this.verbose = verbose;
 		this.data = data;
-		this.port = port;
+		this.clientPort = port;
 		this.length = length;
 		this.mode = userChoice;
 		this.requestType = requestType;
 		//this.numberOfTimeouts = 0;
 		try {
-			sendReceiveSocket = new DatagramSocket();
+			serverSocket = new DatagramSocket();
 		} // end try 
 		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());
@@ -63,7 +63,7 @@ public class ConnectionManagerESim extends Thread {
 		
 		// initialize the DatagramSocket sendSocket
 		try {
-			sendSocket = new DatagramSocket();
+			clientSocket = new DatagramSocket();
 		} // end try 
 		catch (SocketException se) {
 			System.err.println("SocketException: " + se.getMessage());
@@ -132,8 +132,8 @@ public class ConnectionManagerESim extends Thread {
 		
 		// begin closing operations
 		System.out.println("ConnectionManagerESim: ErrorSim is now closiong its sockets");
-		sendReceiveSocket.close();
-		sendSocket.close();
+		serverSocket.close();
+		clientSocket.close();
 	} // end method
 	
 	/**
@@ -157,7 +157,7 @@ public class ConnectionManagerESim extends Thread {
 			byte rly[] = new byte[DATA_SIZE];
 			receiveClientPacket = new DatagramPacket(rly, rly.length);
 			try { // wait to receive client packet
-				sendSocket.receive(receiveClientPacket);
+				clientSocket.receive(receiveClientPacket);
 			}//end try 
 			catch (IOException ie) {
 				System.err.println("IOException error: " + ie.getMessage());
@@ -185,7 +185,7 @@ public class ConnectionManagerESim extends Thread {
 
 		// send the packet to the server via the send/receive socket to server port
 		try {
-			sendReceiveSocket.send(sendServerPacket);
+			serverSocket.send(sendServerPacket);
 		} // end try 
 		catch (IOException ioe) {
 			System.err.println("Unknown IO exception error: " + ioe.getMessage());
@@ -216,7 +216,7 @@ public class ConnectionManagerESim extends Thread {
 
 		// block until you receive a packet from the server
 		try {
-			sendReceiveSocket.receive(receiveServerPacket);
+			serverSocket.receive(receiveServerPacket);
 		} // end try 
 		catch (IOException ioe) {
 			System.err.println("Unknown IO exception error: " + ioe.getMessage());
@@ -231,7 +231,7 @@ public class ConnectionManagerESim extends Thread {
 
 		// prepare the new send packet to the client
 		try {
-			sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), port);
+			sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), clientPort);
 		} // end try
 		catch (UnknownHostException uhe) {
 			uhe.printStackTrace();
@@ -244,7 +244,7 @@ public class ConnectionManagerESim extends Thread {
 
 		// send the packet to the client via the send socket 
 		try {
-			sendSocket.send(sendClientPacket);
+			clientSocket.send(sendClientPacket);
 
 		} // end try 
 		catch (IOException ioe) {
@@ -291,6 +291,14 @@ public class ConnectionManagerESim extends Thread {
 		else
 		{
 			System.out.println("Lost packet is simulated");
+			try {
+				Thread.sleep(TIMEOUT);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if(firstPacket)
+				return true;
 			return false;
 		}
 	}
@@ -355,7 +363,7 @@ public class ConnectionManagerESim extends Thread {
 				byte rly[] = new byte[DATA_SIZE];
 				receiveClientPacket = new DatagramPacket(rly, rly.length);
 				try { // wait to receive client packet
-					sendSocket.receive(receiveClientPacket);
+					clientSocket.receive(receiveClientPacket);
 				}//end try 
 				catch (IOException ie) {
 					System.err.println("IOException error: " + ie.getMessage());
@@ -383,15 +391,15 @@ public class ConnectionManagerESim extends Thread {
 
 			// send the packet to the server TWICE via the send/receive socket to server port
 			try {
-				sendReceiveSocket.send(sendServerPacket);
+				serverSocket.send(sendServerPacket);
 				
 				// if the number generated for duplicate is <= 5, send the server packet twice 
-				if (duplicate <= 5) {
+				if (duplicate <= 10) {
 					System.out.println("The packet being sent to the server will be duplicated");
 					try {
 						Thread.sleep((int)(rando*100));
 					} catch (InterruptedException e) {}
-					sendReceiveSocket.send(sendServerPacket);				
+					serverSocket.send(sendServerPacket);				
 				} // end try 
 			} catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
@@ -399,7 +407,7 @@ public class ConnectionManagerESim extends Thread {
 
 			// print confirmation message that the packet has been sent to the server
 			System.out.println("Packet sent to server");
-			if (lastPacketRead == true)	
+			if (lastPacketRead)	
 			{
 				return true;	// Last packet is now sent. The thread will close
 			}
@@ -422,7 +430,7 @@ public class ConnectionManagerESim extends Thread {
 
 			// block until you receive a packet from the server
 			try {
-				sendReceiveSocket.receive(receiveServerPacket);
+				serverSocket.receive(receiveServerPacket);
 			} // end try 
 			catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
@@ -437,7 +445,7 @@ public class ConnectionManagerESim extends Thread {
 
 			// prepare the new send packet to the client
 			try {
-				sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), port);
+				sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), clientPort);
 			} // end try
 			catch (UnknownHostException uhe) {
 				uhe.printStackTrace();
@@ -450,16 +458,16 @@ public class ConnectionManagerESim extends Thread {
 
 			// send the packet to the client via the send socket 
 			try {
-				sendSocket.send(sendClientPacket);
+				clientSocket.send(sendClientPacket);
 
 				// if the number generated for duplicate is > 5, send the client packet twice 
-				if (duplicate > 5) {
+				/*if (duplicate > 5) {
 					System.out.println("The packet being sent to the client will be duplicated");
 					try {
 						Thread.sleep((int)(rando*100));
 					} catch (InterruptedException e) {}
-					sendReceiveSocket.send(sendClientPacket);				
-				} // end try 
+					serverSocket.send(sendClientPacket);				
+				} // end try */
 			} catch (IOException ioe) {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
 			}

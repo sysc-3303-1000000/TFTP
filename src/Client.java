@@ -161,6 +161,7 @@ public class Client extends Thread {
 							dataNumber[0]--;
 						} // end if
 						ackNum--;
+						blockNum--;
 					} // end else
 				} // end try 
 				catch (FileNotFoundException e) {
@@ -204,6 +205,7 @@ public class Client extends Thread {
 						System.out.println("Client receiving packet from intermediate...");
 						sendReceiveSocket.setSoTimeout(TIMEOUT);
 						sendReceiveSocket.receive(receivePacket);
+						printInformation(receivePacket);
 					} // end try
 					catch (SocketTimeoutException ste) {
 						numberOfTimeouts++;
@@ -213,7 +215,7 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
-					if (numberOfTimeouts == 3) {
+					if (numberOfTimeouts == 5) {
 						System.out.println("Client has timed out 3 times waiting for the next data packet from server");
 						return;
 					}
@@ -310,7 +312,7 @@ public class Client extends Thread {
 					System.err.println("IO Exception error: " + ioe.getMessage());
 					worked = false;
 				} // end catch
-				if (numberOfTimeouts == 3) {
+				if (numberOfTimeouts == 5) {
 					System.out.println("Client has timed out 3 times waiting for the next ack packet from server");
 					return;
 				}
