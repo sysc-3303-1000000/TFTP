@@ -14,7 +14,8 @@ import java.util.*;
 public class Client extends Thread {
 	public static final byte zero = (byte)0;
 	public static final byte one = (byte)1;
-	public static final byte two = (byte)2;	
+	public static final byte two = (byte)2;
+	public static final int TIMEOUT = 3000;
 
 	private DatagramSocket sendReceiveSocket; // Socket used to send and receive packets
 	private DatagramPacket sendPacket, receivePacket, sendData; // Packets used to send an receive information
@@ -112,14 +113,30 @@ public class Client extends Thread {
 		receivePacket = new DatagramPacket(rply, rply.length);
 
 		// block until you receive a packet
-		// TODO ADD A TIME OUT ON IT 
-		try {
-			System.out.println("Client receiving packet from intermediate...");
-			sendReceiveSocket.receive(receivePacket);
-		} // end try
-		catch (IOException ioe) {
-			System.err.println("IO Exception error: " + ioe.getMessage());
-		} // end catch
+		// TODO ADD A TIME OUT ON IT
+		boolean worked = false;
+		int numberOfTimeouts = 0;
+		while (!worked) {
+			try {
+				worked = true;
+				System.out.println("Client receiving packet from intermediate...");
+				sendReceiveSocket.setSoTimeout(TIMEOUT);
+				sendReceiveSocket.receive(receivePacket);
+			} // end try
+			catch (SocketTimeoutException ste) {
+				numberOfTimeouts++;
+				worked = false;
+			} // end catch
+			catch (IOException ioe) {
+				System.err.println("IO Exception error: " + ioe.getMessage());
+				worked = false;
+				
+			} // end catch
+			if (numberOfTimeouts == 3) {
+				System.out.println("Client has timed out 3 times waiting for the first packet back from server");
+				return;
+			} // end if
+		} // end whileloop
 
 		// prints out the information on the received packet
 		printInformation(receivePacket);
@@ -134,13 +151,17 @@ public class Client extends Thread {
 			dataNumber[1] = (byte)1;
 			blockNum = 1;
 			ackNum = 1;
-			while(verifydata(dataNumber, receivePacket)) { // make sure the data block number we were supposed to receive is the right one
-				ack[0] = (byte)0;
-				ack[1] = (byte)4;
-				ack[2] = (byte)((ackNum - (ackNum % 256))/256);
-				ack[3] = (byte)(ackNum % 256);
+			while(true) { 
 				try {
-					WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));
+					if (verifydata(dataNumber, receivePacket))
+						WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));// make sure if we receive a duplicate data packet, we only write the first one
+					else {
+						dataNumber[1]--;
+						if(dataNumber[1] == 255) {
+							dataNumber[0]--;
+						} // end if
+						ackNum--;
+					} // end else
 				} // end try 
 				catch (FileNotFoundException e) {
 					// TODO Auto-generated catch block
@@ -150,39 +171,61 @@ public class Client extends Thread {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} // end catch
-
+				
+				ack[0] = (byte)0;
+				ack[1] = (byte)4;
+				ack[2] = (byte)((ackNum - (ackNum % 256))/256);
+				ack[3] = (byte)(ackNum % 256);
 				try {// create the acknowledge packet to send back to the client
 					sendData = new DatagramPacket(ack, 4, InetAddress.getLocalHost(), receivePacket.getPort());
 				} // end try
 				catch (UnknownHostException uhe) {
 					System.err.println("Unknown host exception error: " + uhe.getMessage());
 				} // end catch
-				try {
-					sendReceiveSocket.send(sendData);
-				} // end try
-				catch (IOException ioe) {
-					System.err.println("Unknown IO exception error: " + ioe.getMessage());
-				} // end catch
-				System.out.println("Sent ack packet");
-				printInformation(sendData);
-				if (receivePacket.getLength() < 516) {
-					break;
-				} // end if
+				worked = false;
+				numberOfTimeouts = 0;
+					try {
+						sendReceiveSocket.send(sendData);
+					} // end try
+					catch (IOException ioe) {
+						System.err.println("Unknown IO exception error: " + ioe.getMessage());
+					} // end catch
+					System.out.println("Sent ack packet");
+					printInformation(sendData);
+					if (receivePacket.getLength() < 516) {
+						break;
+					} // end if
 
-				byte rly[] = new byte[516];
-				receivePacket = new DatagramPacket(rly, rly.length);
-
-				try {
-					System.out.println("Client receiving packet from intermediate...");
-					sendReceiveSocket.receive(receivePacket);
-				} // end try
-				catch (IOException ioe) {
-					System.err.println("IO Exception error: " + ioe.getMessage());
-				} // end catch
-				dataNumber[1] = (byte)(dataNumber[1]+(byte)1);
+					byte rly[] = new byte[516];
+					receivePacket = new DatagramPacket(rly, rly.length);
+				while(!worked) {
+					try {
+						worked = true;
+						System.out.println("Client receiving packet from intermediate...");
+						sendReceiveSocket.setSoTimeout(TIMEOUT);
+						sendReceiveSocket.receive(receivePacket);
+					} // end try
+					catch (SocketTimeoutException ste) {
+						numberOfTimeouts++;
+						worked = false;
+					} // end catch
+					catch (IOException ioe) {
+						System.err.println("IO Exception error: " + ioe.getMessage());
+						worked = false;
+					} // end catch
+					if (numberOfTimeouts == 3) {
+						System.out.println("Client has timed out 3 times waiting for the next data packet from server");
+						return;
+					}
+					if (worked)
+						dat = rly; // new dat will be the data from the packet just received
+				} // end whileloop
+				dataNumber[1]++;
+				if(dataNumber[1] == 0) {
+					dataNumber[0]++;
+				}
 				ackNum++; // next ack
 				blockNum++; // next block
-				dat = rly; // new dat will be the data from the packet just received
 			} // end whileloop
 		} // end if
 		else if (req == Request.WRITE) { // if request was a write
@@ -190,11 +233,15 @@ public class Client extends Thread {
 			ackNumber[1] = (byte)0;
 			blockNum = 1;
 			ackNum = 0;
-			while(verifyack(ackNumber, receivePacket)) {
-
-
+			while(/*verifyack(ackNumber, receivePacket)*/ true) {
 				byte[] fileData = new byte[0];
-
+				if (verifyack(ackNumber, receivePacket)) {
+				/*	ackNumber[1]--;
+					if(ackNumber[1] == 255) {
+						ackNumber[0]--;
+					}
+					blockNum--;
+				}*/
 				try {
 					fileData = ReadFromFile(blockNum);
 				} // end try
@@ -227,6 +274,18 @@ public class Client extends Thread {
 				} // end catch
 				System.out.println("created the following data packet to send off");
 				printInformation(sendData);
+				}
+				else {
+					ackNumber[1]--;
+					if(ackNumber[1] == 255) {
+						ackNumber[0]--;
+					}
+					blockNum--;
+				}
+				worked = false;
+				numberOfTimeouts = 0;
+				
+				while(!worked) {
 				try {
 					sendReceiveSocket.send(sendData);
 				} // end try
@@ -238,17 +297,31 @@ public class Client extends Thread {
 				receivePacket = new DatagramPacket(reply, reply.length);
 
 				try {
+					worked = true;
 					System.out.println("Client receiving packet from intermediate...");
+					sendReceiveSocket.setSoTimeout(TIMEOUT);
 					sendReceiveSocket.receive(receivePacket);
 				} // end try
+				catch (SocketTimeoutException ste) {
+					numberOfTimeouts++;
+					worked = false;
+				} // end catch
 				catch (IOException ioe) {
 					System.err.println("IO Exception error: " + ioe.getMessage());
+					worked = false;
 				} // end catch
-				ackNumber[1] = (byte)(ackNumber[1]+(byte)1);
+				if (numberOfTimeouts == 3) {
+					System.out.println("Client has timed out 3 times waiting for the next ack packet from server");
+					return;
+				}
+				} // end whileloop
+				ackNumber[1]++;
+				if(ackNumber[1] == 0) {
+					ackNumber[0]++;
+				}
 				blockNum++;
 				System.out.println("Client just received ack packet from server");
 				printInformation(receivePacket);
-
 			} // end whileloop
 		} // end if
 

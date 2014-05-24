@@ -2,12 +2,6 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import javax.swing.*;
-import javax.swing.filechooser.FileSystemView;
-
-import java.awt.*;
-import java.awt.event.*;
-
 /**
  * The following is implementation for the Client User Interface
  * 
@@ -22,14 +16,14 @@ public class ClientUI {
 	/**
 	 * Main method for the Client User Interface
 	 * @param args not used
+	 * @throws IOException if file or folder not present
+	 * @throws NumberFormatException if numbers not entered where supposed to be numbers
 	 * 
 	 * @since May 21 2014
 	 * 
 	 * Latest Change: Added User Interface
 	 * @version May 21 2014
 	 * @author Kais
-	 * @throws IOException 
-	 * @throws NumberFormatException 
 	 * 
 	 */
 	public static void main(String[] args) throws NumberFormatException, IOException {
@@ -43,7 +37,7 @@ public class ClientUI {
 			do {
 				System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
 				rw = Integer.parseInt(br.readLine());
-			} while (rw != 1 && rw != 2); // end do while
+			} while (rw != 1 && rw != 2); // end dowhile
 		
 			if (rw == 1) {
 				System.out.println("What is the name of the file you wish to read from the server? (i.e. 'Test.txt')");
@@ -52,10 +46,8 @@ public class ClientUI {
 				directory = br.readLine();
 				Thread client = new Client(filename, directory, Request.READ);
 				client.start();
-				while (client.getState() != Thread.State.TERMINATED) {
-					
-				}
-			}
+				while (client.getState() != Thread.State.TERMINATED) {}
+			} // end if
 			else if (rw == 2) {
 				System.out.println("What is the name of the file you wish to write to the server? (i.e. 'Test.txt')");
 				filename = br.readLine();
@@ -63,13 +55,11 @@ public class ClientUI {
 				directory = br.readLine();
 				Thread client = new Client(filename, directory, Request.WRITE);
 				client.start();
-				while (client.getState() != Thread.State.TERMINATED) {
-					
-				}
-			}
+				while (client.getState() != Thread.State.TERMINATED) {}
+			} // end if
 			System.out.println("Would you like to invoke another read or write? (0 - Yes, anything else - No)");
 			exit = Integer.parseInt(br.readLine());
-		} while (exit == 0); // end do while
+		} while (exit == 0); // end dowhile
 	} // end method
 
 } // end class
