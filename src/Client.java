@@ -25,7 +25,7 @@ public class Client extends Thread {
 	private byte[] ackNumber = new byte[2];
 	private byte[] dataNumber = new byte[2];
 	private int blockNum, ackNum; // the current datablock number and ack block number
-
+	private boolean endFile = false; // indicates if we have reached the last DATA block
 	private byte message[];
 	private Request req;
 
@@ -132,8 +132,8 @@ public class Client extends Thread {
 				worked = false;
 				
 			} // end catch
-			if (numberOfTimeouts == 3) {
-				System.out.println("Client has timed out 3 times waiting for the first packet back from server");
+			if (numberOfTimeouts == 5) {
+				System.out.println("Client has timed out 5 times waiting for the first packet back from server");
 				return;
 			} // end if
 		} // end whileloop
@@ -216,7 +216,7 @@ public class Client extends Thread {
 						worked = false;
 					} // end catch
 					if (numberOfTimeouts == 5) {
-						System.out.println("Client has timed out 3 times waiting for the next data packet from server");
+						System.out.println("Client has timed out 5 times waiting for the next data packet from server");
 						return;
 					}
 					if (worked)
@@ -262,8 +262,8 @@ public class Client extends Thread {
 				data[2] = (byte)((blockNum - (blockNum % 256))/256);
 				data[3] = (byte)(blockNum % 256);
 
-				if (fileData.length == 0) {
-					break;
+				if (fileData.length < 512) {
+					endFile = true;
 				} // end if
 
 				System.arraycopy(fileData, 0, data, 4, fileData.length);
@@ -294,7 +294,8 @@ public class Client extends Thread {
 				catch (IOException ioe) {
 					System.err.println("Unknown IO exception error: " + ioe.getMessage());
 				} // end catch
-
+				if (endFile)
+					break;
 				byte reply[] = new byte[4];
 				receivePacket = new DatagramPacket(reply, reply.length);
 
@@ -317,6 +318,8 @@ public class Client extends Thread {
 					return;
 				}
 				} // end whileloop
+				if (endFile)
+					break;
 				ackNumber[1]++;
 				if(ackNumber[1] == 0) {
 					ackNumber[0]++;

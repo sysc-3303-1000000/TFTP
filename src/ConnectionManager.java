@@ -117,7 +117,7 @@ public class ConnectionManager extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 					} // end catch
 					if(numberOfTimeouts == 5){
-						System.out.println("Server has timed out 3 times waiting for the next data packet from client");
+						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
 				}
@@ -236,7 +236,7 @@ public class ConnectionManager extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 					} // end catch
 					if(numberOfTimeouts == 5){
-						System.out.println("Server has timed out 3 times waiting for the next data packet from client");
+						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
 				}

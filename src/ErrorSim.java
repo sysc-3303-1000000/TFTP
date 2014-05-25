@@ -13,7 +13,7 @@ import java.util.Scanner;
  * @since May 11 2014
  * 
  * @author 1000000
- * @version May 21 2014
+ * @version May 24 2014
  *
  */
 public class ErrorSim {
@@ -24,11 +24,13 @@ public class ErrorSim {
 	
 	// declare the packet
 	private DatagramPacket receiveClientPacket;
-	
+	// the byte array for the data being stored
 	private byte data[];
 	// will determine if we go into verbose mode or a silent mode
 	// to have full implementation in a later version
 	private boolean verbose;
+	// value of how much we want to delay the packet by -- default to 0 if we are not running in delayed mode
+	private int delayAmount = 0;
 	
 	/**
 	 * 	Will determine the user input based on an integer value
@@ -79,7 +81,7 @@ public class ErrorSim {
 	private void printPacketInfo(DatagramPacket p) {
 		
 		// print out the information on the packet
-		System.out.println("*******************************************");
+		System.out.println("PACKET INFORMATION");
 		System.out.println("Host: " + p.getAddress());
 		System.out.println("Host port: " + p.getPort());
 		System.out.println("Containing the following \nString: " + new String(p.getData()));
@@ -88,6 +90,7 @@ public class ErrorSim {
 		for (int i = 0; i < p.getLength(); i++) {
 			System.out.print(Integer.toHexString(p.getData()[i]));
 		} // end forloop
+		System.out.println("\n******************************************************");
 		System.out.println("\n\n");
 	} // end method
 	
@@ -102,6 +105,7 @@ public class ErrorSim {
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong
 	 */	
 	public void sendReceive(){
+		// NORMAL MODE
 		if (userChoice == 0) {
 			System.out.println("ErrorSim will be running in Normal mode");
 		}
@@ -109,14 +113,22 @@ public class ErrorSim {
 		else if (userChoice == 1) {
 			System.out.println("ErrorSim will be running in Lost packet mode");
 		}
-
+		// DELAYED MODE
 		else if (userChoice == 2) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Delayed packet mode");
+			System.out.println("Please enter the delay of the packet (3000 will be 3000 milliseconds): ");
+			delayAmount = input.nextInt();
 
 		}
-
+		// DUPLICATE MODE
 		else if (userChoice == 3) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Duplicate packet mode");
+			System.out.println("Please enter the delay between the duplicated packet (3000 will be 3000 milliseconds): ");
+			delayAmount = input.nextInt();
 		}
 		
 		System.out.println("Error Simulator is waiting for new client request!");
@@ -131,7 +143,7 @@ public class ErrorSim {
 		if(verbose)
 			printPacketInfo(receiveClientPacket);
 
-		Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
+		Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, delayAmount, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
 		connectionmanager.start();
 
 		while (connectionmanager.getState() != Thread.State.TERMINATED) {
@@ -218,7 +230,7 @@ public class ErrorSim {
 		
 		// close the Scanner
 		in.close();
-		System.out.println ("Error Simulator will shut down");
+		System.out.println ("ErrorSim: shutting down");
 		System.exit(0);
 	} // end method
 } // end class

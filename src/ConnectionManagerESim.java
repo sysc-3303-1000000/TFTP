@@ -25,7 +25,7 @@ public class ConnectionManagerESim extends Thread {
 	private int clientPort;
 	private int length;
 	private int mode;	// will have the value of the current error simulation mode 
-	//private int numberOfTimeouts; // keeps tracks of the number of timeouts 
+	private int delay; // will store the amount of delay if we are running in delayed mode
 	private Request requestType;
 	private boolean lastPacketWrite = false;
 	private boolean lastPacketRead = false;
@@ -46,14 +46,14 @@ public class ConnectionManagerESim extends Thread {
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong
 	 * 
 	 */
-	public ConnectionManagerESim(boolean verbose, int userChoice, byte[] data, int port, int length, Request requestType) {
+	public ConnectionManagerESim(boolean verbose, int userChoice, int delay, byte[] data, int port, int length, Request requestType) {
 		this.verbose = verbose;
 		this.data = data;
 		this.clientPort = port;
 		this.length = length;
 		this.mode = userChoice;
 		this.requestType = requestType;
-		//this.numberOfTimeouts = 0;
+		this.delay = delay;
 		try {
 			serverSocket = new DatagramSocket();
 		} // end try 
@@ -69,7 +69,7 @@ public class ConnectionManagerESim extends Thread {
 			System.err.println("SocketException: " + se.getMessage());
 		} // end catch
 		
-		System.out.println("ConnectionManagerESim Thread started to service request!");
+		System.out.println("ConnectionManagerESim: Thread started to service request!");
 	} // end constructor
 	
 	/**
@@ -131,7 +131,7 @@ public class ConnectionManagerESim extends Thread {
 		}//end while
 		
 		// begin closing operations
-		System.out.println("ConnectionManagerESim: ErrorSim is now closiong its sockets");
+		System.out.println("ConnectionManagerESim: ErrorSim is now closing its sockets");
 		serverSocket.close();
 		clientSocket.close();
 	} // end method
@@ -148,12 +148,15 @@ public class ConnectionManagerESim extends Thread {
 	 */
 	private boolean normalOp() 
 	{
-		System.out.println("ConnectionManagerESim: Running Normal Operation\n");
-
-		System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
+		
+		if (verbose)
+			System.out.println("ConnectionManagerESim: Running Normal Operation\n");
 
 		// this is not the first packet, we need to wait for the client to send back to us
 		if (!firstPacket) {
+			if (verbose)
+				System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
+			
 			byte rly[] = new byte[DATA_SIZE];
 			receiveClientPacket = new DatagramPacket(rly, rly.length);
 			try { // wait to receive client packet
@@ -324,10 +327,10 @@ public class ConnectionManagerESim extends Thread {
 		{
 			System.out.println("Packet will be delayed. Thread will sleep now");
 			try {
-                Thread.sleep(TIMEOUT + (int)(3*rando*100));	//delays the packet for the timeout period plus a random amount. 
+                Thread.sleep(delay);	//delays the packet for the specified amount
             } catch (InterruptedException e)
             {}
-			System.out.println("*************Packet was delayed by: " + (TIMEOUT + (3*rando*100)) + "!************");
+			System.out.println("*************Packet was delayed by: " + delay + "ms!************");
 			System.out.println("Normal operation will continue now");
 			return normalOp();
 		}
@@ -397,7 +400,7 @@ public class ConnectionManagerESim extends Thread {
 				if (duplicate <= 10) {
 					System.out.println("The packet being sent to the server will be duplicated");
 					try {
-						Thread.sleep((int)(rando*100));
+						Thread.sleep(delay);
 					} catch (InterruptedException e) {}
 					serverSocket.send(sendServerPacket);				
 				} // end try 
@@ -464,7 +467,7 @@ public class ConnectionManagerESim extends Thread {
 				/*if (duplicate > 5) {
 					System.out.println("The packet being sent to the client will be duplicated");
 					try {
-						Thread.sleep((int)(rando*100));
+						Thread.sleep(delay);
 					} catch (InterruptedException e) {}
 					serverSocket.send(sendClientPacket);				
 				} // end try */
