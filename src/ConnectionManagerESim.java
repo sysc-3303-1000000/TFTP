@@ -183,7 +183,7 @@ public class ConnectionManagerESim extends Thread {
 
 		serverReceive();
 
-		sendClient();
+		clientSend();
 		firstPacket = false;		// any following packets the connection manager receives will be not the second packet
 		if (lastPacketWrite == true)
 		{
@@ -571,7 +571,7 @@ public class ConnectionManagerESim extends Thread {
 	}
 	
 	/**
-	 * The following will be the method to SEND SERVER PACKETS
+	 * The following will be the method to SEND CLIENT PACKETS
 	 * 
 	 * @since May 27 2014
 	 * 
@@ -579,31 +579,35 @@ public class ConnectionManagerESim extends Thread {
 	 * @version May 27 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */	
-	private void serverSend() {
+	private void clientSend(){
+		
 		if (verbose)
-			System.out.println("ConnectionManageESim: Preparing packet to send to Server");
-		// prepare the new send packet to the server
+			System.out.println("ConnetionManagerESim: Preparing packet to send to Client");
+		
+		// prepare the new send packet to the client
 		try {
-			sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
-		} // end try 
+			sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), clientPort);
+		} // end try
 		catch (UnknownHostException uhe) {
-			System.err.println("Unknown host exception error: " + uhe.getMessage());
+			uhe.printStackTrace();
+			System.exit(1);
 		} // end catch
 
-		if(verbose)
-			printInformation(sendServerPacket);
+		if(verbose) // print out information about the packet being sent to the client
+			printInformation(sendClientPacket);
 
-		// send the packet to the server via the send/receive socket to server port
+		// send the packet to the client via the send socket 
 		try {
-			serverSocket.send(sendServerPacket);
+			clientSocket.send(sendClientPacket);
+
 		} // end try 
 		catch (IOException ioe) {
 			System.err.println("Unknown IO exception error: " + ioe.getMessage());
 		} // end catch
 
-		// print confirmation message that the packet has been sent to the server
+		// print confirmation message that the packet has been sent to the client
 		if (verbose)
-			System.out.println("Packet sent to server");
+			System.out.println("Response packet sent to client");
 	}
 	
 	/**
@@ -639,9 +643,9 @@ public class ConnectionManagerESim extends Thread {
 		serverPort = receiveServerPacket.getPort();
 
 	}
-	
+		
 	/**
-	 * The following will be the method to SEND CLIENT PACKETS
+	 * The following will be the method to SEND SERVER PACKETS
 	 * 
 	 * @since May 27 2014
 	 * 
@@ -649,38 +653,34 @@ public class ConnectionManagerESim extends Thread {
 	 * @version May 27 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */	
-	private void sendClient(){
-		
+	private void serverSend() {
 		if (verbose)
-			System.out.println("ConnetionManagerESim: Preparing packet to send to Client");
-		
-		// prepare the new send packet to the client
+			System.out.println("ConnectionManageESim: Preparing packet to send to Server");
+		// prepare the new send packet to the server
 		try {
-			sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), clientPort);
-		} // end try
+			sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
+		} // end try 
 		catch (UnknownHostException uhe) {
-			uhe.printStackTrace();
-			System.exit(1);
+			System.err.println("Unknown host exception error: " + uhe.getMessage());
 		} // end catch
 
-		if(verbose) // print out information about the packet being sent to the client
-			printInformation(sendClientPacket);
+		if(verbose)
+			printInformation(sendServerPacket);
 
-		// send the packet to the client via the send socket 
+		// send the packet to the server via the send/receive socket to server port
 		try {
-			clientSocket.send(sendClientPacket);
-
+			serverSocket.send(sendServerPacket);
 		} // end try 
 		catch (IOException ioe) {
 			System.err.println("Unknown IO exception error: " + ioe.getMessage());
 		} // end catch
 
-		// print confirmation message that the packet has been sent to the client
+		// print confirmation message that the packet has been sent to the server
 		if (verbose)
-			System.out.println("Response packet sent to client");
+			System.out.println("Packet sent to server");
 	}
 	
-	
+		
 	/**
 	 * The following is a method for a random number generator from 1-10 used to randomly generate errors
 	 * 
