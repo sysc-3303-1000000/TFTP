@@ -29,9 +29,12 @@ public class ErrorSim {
 	// will determine if we go into verbose mode or a silent mode
 	// to have full implementation in a later version
 	private boolean verbose;
-	// value of how much we want to delay the packet by -- default to 0 if we are not running in delayed mode
+	// value of how much we want to delay the packet by -- default to 0 if we are not running in delayed mode or duplicate
 	private int delayAmount = 0;
-	
+	// stores which packet type we are altering -- default is 0 if we are running normally
+	private int packetType = 0;
+	// stores which packet number we are altering -- default is 0 if we are running normally
+	private int packetNumber = 0;
 	/**
 	 * 	Will determine the user input based on an integer value
 	 * 0 Normal packets
@@ -109,9 +112,26 @@ public class ErrorSim {
 		if (userChoice == 0) {
 			System.out.println("ErrorSim will be running in Normal mode");
 		}
-
+		
+		// LOST MODE 
 		else if (userChoice == 1) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Lost packet mode");
+			System.out.println("Please enter the type of packet you would like to lose:\n1 - RRQ\n2 - WRQ\n3 - DATA\n4 - ACK");
+			packetType = input.nextInt();
+			
+			// check if it is a DATA or ACK that we are changing, grab which packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to lose: ");
+				packetNumber = input.nextInt();
+			}
+			
+			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			else {
+				packetNumber = 1;
+			}
+			
 		}
 		// DELAYED MODE
 		else if (userChoice == 2) {
@@ -143,7 +163,7 @@ public class ErrorSim {
 		if(verbose)
 			printPacketInfo(receiveClientPacket);
 
-		Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, delayAmount, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
+		Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, delayAmount, packetType, packetNumber, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
 		connectionmanager.start();
 
 		while (connectionmanager.getState() != Thread.State.TERMINATED) {

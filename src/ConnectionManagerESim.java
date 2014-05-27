@@ -15,7 +15,7 @@ import java.net.*;
 public class ConnectionManagerESim extends Thread {
 	public static final int DATA_SIZE = 516;
 	public static final int PERCENTPASS = 9;	//int value 0-10 (0 being 100 fail rate)
-	public static final long TIMEOUT = 3000;		//int value in miliseconds 
+	public static final long TIMEOUT = 3000;	//int value in miliseconds 
 	
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
 	private DatagramSocket serverSocket, clientSocket; // socket deceleration for all three required sockets 
@@ -26,12 +26,16 @@ public class ConnectionManagerESim extends Thread {
 	private int length;
 	private int mode;	// will have the value of the current error simulation mode 
 	private int delay; // will store the amount of delay if we are running in delayed mode
+	private int packetType; // the type of packet we are changing
+	private int packetNumber; // the packet number that we are changing
 	private Request requestType;
 	private boolean lastPacketWrite = false;
 	private boolean lastPacketRead = false;
 	private boolean firstPacket = true;
 	private boolean end = false;
-	
+	private boolean isLost = false; // this value will change to true when we find the first packet that we want to lose
+	byte rly[] = new byte[DATA_SIZE]; // this will store the reply from the client
+	byte response[] = new byte[DATA_SIZE]; // this will store the response from the server
 	/**
 	 * The following is the constructor for ListenerESim
 	 * @param verbose whether verbose mode is enabled
@@ -46,7 +50,8 @@ public class ConnectionManagerESim extends Thread {
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong
 	 * 
 	 */
-	public ConnectionManagerESim(boolean verbose, int userChoice, int delay, byte[] data, int port, int length, Request requestType) {
+	public ConnectionManagerESim(boolean verbose, int userChoice, int delay, int packetType, int packetNumber, byte[] data, int port, int length, Request requestType) {
+		// initialize the variables
 		this.verbose = verbose;
 		this.data = data;
 		this.clientPort = port;
@@ -54,6 +59,9 @@ public class ConnectionManagerESim extends Thread {
 		this.mode = userChoice;
 		this.requestType = requestType;
 		this.delay = delay;
+		this.packetType = packetType;
+		this.packetNumber = packetNumber;
+		
 		try {
 			serverSocket = new DatagramSocket();
 		} // end try 
@@ -154,9 +162,62 @@ public class ConnectionManagerESim extends Thread {
 
 		// this is not the first packet, we need to wait for the client to send back to us
 		if (!firstPacket) {
+			clientReceive();
+
+		}//end if
+
+		serverSend();
+		if (lastPacketRead == true)	
+		{
+			return true;	// Last packet is now sent. The thread will close
+		}
+		if (requestType == Request.WRITE && !firstPacket)
+		{
+			if(sendServerPacket.getLength() < DATA_SIZE)
+			{
+				lastPacketWrite = true;	
+			}
+		}
+
+		//*********************************************************************************
+
+		serverReceive();
+
+		sendClient();
+		firstPacket = false;		// any following packets the connection manager receives will be not the second packet
+		if (lastPacketWrite == true)
+		{
+			return true;	// Last packet is now sent. The thread will close
+		}
+		if (requestType == Request.READ && !firstPacket)	
+		{
+			if(sendClientPacket.getLength() < DATA_SIZE)
+			{
+				lastPacketRead = true;
+			}
+		}
+			
+			return false;
+	}
+	
+	/**
+	 * The following is the run method for ConnectionManagerESim with lost packets, used to execute code upon starting the thread.
+	 * It will pass an receive packets between the errorsim and server and the server and the client.
+	 * 
+	 * @since May 21 2014
+	 * 
+	 * Latest Change: Run with lost packets method added, full implementation added
+	 * @version May 24 2014
+	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
+	 * 
+	 */
+	private boolean lostOp()
+	{
+		// this is not the first packet, we need to wait for the client to send back to us
+		if (!firstPacket) {
 			if (verbose)
 				System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
-			
+
 			byte rly[] = new byte[DATA_SIZE];
 			receiveClientPacket = new DatagramPacket(rly, rly.length);
 			try { // wait to receive client packet
@@ -171,10 +232,21 @@ public class ConnectionManagerESim extends Thread {
 			// updating the data and length in the packet being sent to the server
 			data = receiveClientPacket.getData();
 			length = receiveClientPacket.getLength();
-
+			// check to see if this is the packet that we want to lose
+			if (!isLost && foundPacket(receiveClientPacket)) {
+				if (verbose) {
+					System.out.println("ConnectionManagerESim: simulating a lost packet");
+					printInformation(receiveClientPacket);
+				}
+					
+				isLost = true;
+				return false;
+			}
 		}//end if
 
 		System.out.println("ConnectionManageESim: Received packet from client. Preparing packet to send to Server");
+		
+
 		// prepare the new send packet to the server
 		try {
 			sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
@@ -206,6 +278,7 @@ public class ConnectionManagerESim extends Thread {
 			{
 				lastPacketWrite = true;	
 			}
+		
 		}
 
 		//*********************************************************************************
@@ -225,6 +298,16 @@ public class ConnectionManagerESim extends Thread {
 			System.err.println("Unknown IO exception error: " + ioe.getMessage());
 		} // end catch
 
+		// check to see if this is the packet that we want to lose
+		if (!isLost && foundPacket(receiveServerPacket)) {
+			if (verbose) {
+				System.out.println("ConnectionManagerESim: simulating a lost packet");
+				printInformation(receiveServerPacket);
+			}
+			isLost = true;
+			return false;
+		}
+		
 		response = receiveServerPacket.getData();
 		if(verbose) // print out information about the packet received from the server if verbose
 			printInformation(receiveServerPacket);
@@ -268,42 +351,7 @@ public class ConnectionManagerESim extends Thread {
 				lastPacketRead = true;
 			}
 		}
-			
-			return false;
-	}
-	
-	/**
-	 * The following is the run method for ConnectionManagerESim with lost packets, used to execute code upon starting the thread.
-	 * It will pass an receive packets between the errorsim and server and the server and the client.
-	 * 
-	 * @since May 21 2014
-	 * 
-	 * Latest Change: Run with lost packets method added, full implementation added
-	 * @version May 24 2014
-	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
-	 * 
-	 */
-	private boolean lostOp()
-	{
-		double rando = randoNum();	//Random number from 1-10
-		if(rando <= PERCENTPASS)	//Check if the Random number is less than the percent pass
-		{
-			System.out.println("Lost packet will not be simulated, normal operation will continue");
-			return normalOp();
-		}
-		else
-		{
-			System.out.println("Lost packet is simulated");
-			try {
-				Thread.sleep(TIMEOUT);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			if(firstPacket)
-				return true;
-			return false;
-		}
+		return false;
 	}
 	
 	/**
@@ -495,6 +543,145 @@ public class ConnectionManagerESim extends Thread {
 	}
 
 	/**
+	 * The following will be the method to RECEIVE CLIENT PACKETS
+	 * 
+	 * @since May 27 2014
+	 * 
+	 * Latest Change: 
+	 * @version May 27 2014
+	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
+	 */	
+	private void clientReceive() {
+		if (verbose)
+			System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
+
+		receiveClientPacket = new DatagramPacket(rly, rly.length);
+		try { // wait to receive client packet
+			clientSocket.receive(receiveClientPacket);
+		}//end try 
+		catch (IOException ie) {
+			System.err.println("IOException error: " + ie.getMessage());
+		}//end catch
+
+		System.out.println("ConnectionManagerESim: Received packet from client");
+		printInformation(receiveClientPacket);
+		// updating the data and length in the packet being sent to the server
+		data = receiveClientPacket.getData();
+		length = receiveClientPacket.getLength();
+	}
+	
+	/**
+	 * The following will be the method to SEND SERVER PACKETS
+	 * 
+	 * @since May 27 2014
+	 * 
+	 * Latest Change: 
+	 * @version May 27 2014
+	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
+	 */	
+	private void serverSend() {
+		if (verbose)
+			System.out.println("ConnectionManageESim: Preparing packet to send to Server");
+		// prepare the new send packet to the server
+		try {
+			sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
+		} // end try 
+		catch (UnknownHostException uhe) {
+			System.err.println("Unknown host exception error: " + uhe.getMessage());
+		} // end catch
+
+		if(verbose)
+			printInformation(sendServerPacket);
+
+		// send the packet to the server via the send/receive socket to server port
+		try {
+			serverSocket.send(sendServerPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		// print confirmation message that the packet has been sent to the server
+		if (verbose)
+			System.out.println("Packet sent to server");
+	}
+	
+	/**
+	 * The following will be the method to RECEIVE SERVER PACKETS
+	 * 
+	 * @since May 27 2014
+	 * 
+	 * Latest Change: 
+	 * @version May 27 2014
+	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
+	 */	
+	private void serverReceive(){
+		
+		if (verbose)
+			System.out.println("ConnectrionManagerESim: Waiting to receive a packet from server...\n");
+		
+		receiveServerPacket = new DatagramPacket(response, response.length);
+
+		// block until you receive a packet from the server
+		try {
+			serverSocket.receive(receiveServerPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		response = receiveServerPacket.getData();
+		
+		if(verbose) // print out information about the packet received from the server if verbose
+			printInformation(receiveServerPacket);
+
+		// set the serverPort to the port we have just received it from (meaning to the Server Thread that will deal with this request
+		serverPort = receiveServerPacket.getPort();
+
+	}
+	
+	/**
+	 * The following will be the method to SEND CLIENT PACKETS
+	 * 
+	 * @since May 27 2014
+	 * 
+	 * Latest Change: 
+	 * @version May 27 2014
+	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
+	 */	
+	private void sendClient(){
+		
+		if (verbose)
+			System.out.println("ConnetionManagerESim: Preparing packet to send to Client");
+		
+		// prepare the new send packet to the client
+		try {
+			sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), clientPort);
+		} // end try
+		catch (UnknownHostException uhe) {
+			uhe.printStackTrace();
+			System.exit(1);
+		} // end catch
+
+		if(verbose) // print out information about the packet being sent to the client
+			printInformation(sendClientPacket);
+
+		// send the packet to the client via the send socket 
+		try {
+			clientSocket.send(sendClientPacket);
+
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		// print confirmation message that the packet has been sent to the client
+		if (verbose)
+			System.out.println("Response packet sent to client");
+	}
+	
+	
+	/**
 	 * The following is a method for a random number generator from 1-10 used to randomly generate errors
 	 * 
 	 * @since May 21 2014
@@ -507,4 +694,78 @@ public class ConnectionManagerESim extends Thread {
 	{
 		return Math.random()*10;
 	}
+	
+	/**
+	 * This method will check whether or not this is a DATA or ACK packet. 
+	 * The return will be used to keep track of which of the packets we actually want to change
+	 * @param p the DatagramPacket that we are looking to implement the changes to
+	 * @return an integer value of the packet type: 1 RRQ, 2 WRQ, 3 DATA, 4 ACK
+	 * @since May 24 2014
+	 * 
+	 * Latest Change: added implementation to check on whether or not this is a DATA or ACK packet
+	 * @version May 24 2014
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
+	 */
+	private int packetType(DatagramPacket p){
+		int type;
+		// set type, to the type of packet it is based on its second byte
+		type = (int)(p.getData()[1]);
+		if (verbose)
+			System.out.println("ConnectionManagerESim: packet type is " + type);
+		return type;
+	}// end method
+	
+	/**
+	 * This method will check if this is the packet that we are looking for
+	 * @param p the DatagramPacket that we are looking to implement the changes to
+	 * @param packetCount the packet number we are checking to see if that is what the user entered 
+	 * @since May 24 2014
+	 * 
+	 * Latest Change: added implementation to check on whether or not this is a DATA or ACK packet
+	 * @version May 24 2014
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
+	 */
+	private boolean foundPacket(DatagramPacket p) {
+		int pType = packetType(p);
+		// the block number we are looking for in bytes
+		byte blk[] = new byte[2];
+		// the high byte
+		blk[0] = (byte)((packetNumber - (packetNumber % 256)) /256);
+		// the low byte
+		blk[1] = (byte)(packetNumber % 256);
+		
+		// the packet's block number that we are checking
+		byte blkCheck[] = blockNumber(p);
+		// check if it is the right packet type
+		if (pType ==  packetType) {
+			if (verbose)
+				System.out.println("ConnectionManagerESim: this is the correct packet type, checking if it is the correct number..");
+			if (blk[0] == blkCheck[0] && blk[1] == blkCheck[1]){
+				if (verbose)
+					System.out.println("ConnectionManagerESim: this is the right packet to change!");
+				return true;
+			} // end if
+		} // end if
+		return false;
+	}// end method
+	
+	/**
+	 * This method will give us the block number
+	 * 
+	 * @param p the DatagramPacket that need to get the block number from'
+	 * @return the block number of the packet
+	 * @since May 24 2014
+	 * 
+	 * Latest Change: returning the block number
+	 * @version May 24 2014
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
+	 */	
+	private byte[] blockNumber(DatagramPacket p) {
+		byte[] blockNum = {p.getData()[2], p.getData()[3]};
+		if (verbose)
+			System.out.println("Block number: " + Integer.toHexString(blockNum[0]) + Integer.toHexString(blockNum[1]));
+		return blockNum;
+	} // end method
+	
+
 } // end class
