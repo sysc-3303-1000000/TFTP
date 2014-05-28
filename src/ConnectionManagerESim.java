@@ -33,7 +33,6 @@ public class ConnectionManagerESim extends Thread {
 	private boolean lastPacketRead = false;
 	private boolean firstPacket = true;
 	private boolean end = false;
-	private boolean isLost = false; // this value will change to true when we find the first packet that we want to lose
 	byte rly[] = new byte[DATA_SIZE]; // this will store the reply from the client
 	byte response[] = new byte[DATA_SIZE]; // this will store the response from the server
 	/**
@@ -78,6 +77,11 @@ public class ConnectionManagerESim extends Thread {
 		} // end catch
 		
 		System.out.println("ConnectionManagerESim: Thread started to service request!");
+		try {
+			receiveClientPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), port);
+		} catch (UnknownHostException e) {
+			System.err.println("UnknownHostException: " + e.getMessage());
+		}
 	} // end constructor
 	
 	/**
@@ -139,7 +143,7 @@ public class ConnectionManagerESim extends Thread {
 		}//end while
 		
 		// begin closing operations
-		System.out.println("ConnectionManagerESim: ErrorSim is now closing its sockets");
+		System.out.println("ConnectionManagerESim: closing its sockets and shutting down the thread");
 		serverSocket.close();
 		clientSocket.close();
 	} // end method
@@ -213,144 +217,220 @@ public class ConnectionManagerESim extends Thread {
 	 */
 	private boolean lostOp()
 	{
-		// this is not the first packet, we need to wait for the client to send back to us
-		if (!firstPacket) {
+		// check if this is a read request or a write request
+		if (requestType == Request.READ){ // this is a read request
 			if (verbose)
-				System.out.println("ConnectionManagerESim: Waiting to receive packet from client");
-
-			byte rly[] = new byte[DATA_SIZE];
-			receiveClientPacket = new DatagramPacket(rly, rly.length);
-			try { // wait to receive client packet
-				clientSocket.receive(receiveClientPacket);
-			}//end try 
-			catch (IOException ie) {
-				System.err.println("IOException error: " + ie.getMessage());
-			}//end catch
-
-			System.out.println("ConnectionManagerESim: Received packet from client");
-			printInformation(receiveClientPacket);
-			// updating the data and length in the packet being sent to the server
-			data = receiveClientPacket.getData();
-			length = receiveClientPacket.getLength();
-			// check to see if this is the packet that we want to lose
-			if (!isLost && foundPacket(receiveClientPacket)) {
-				if (verbose) {
-					System.out.println("ConnectionManagerESim: simulating a lost packet");
+				System.out.println("ConnectionManagerESim: lost op Request is a read");
+			// ************* RRQ PACKET ***************			
+			if (packetType == 1) { // lose a RRQ packet
+				if (verbose){
+					System.out.println("ConnectionManagerESim: simulating a lost client RRQ packet");
 					printInformation(receiveClientPacket);
-				}
+				}//end if
+				return true; 
+			}// end if
+							
+			// ************* ACK PACKET ***************
+			else if (packetType == 4){ // check to lose a ACK packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to lose ACK packet");
+				if (!lastPacketRead) {
 					
-				isLost = true;
-				return false;
-			}
+					if (!firstPacket) {
+					// receive from client
+					clientReceive();
+					}// end if
+					firstPacket = false; // this is no longer the first packet
+					// check to see if this is the packet that we want to lose
+					if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
+						if (verbose) {
+							System.out.println("ConnectionManagerESim: simulating a lost client ACK packet");
+							printInformation(receiveClientPacket);
+						}// end if
+						//we go back to operating as normal
+						mode = 0;
+					}//end if
+					
+					else { // this is not the packet we want to lose, send to server
+						serverSend();
+					}//end else
+					
+					// we need to wait on a server packet
+					serverReceive();
+					
+					//send to the client
+					clientSend();
+					//check to see if this is the last packet (DATA < 512b 
+					if(sendClientPacket.getLength() < DATA_SIZE)
+						lastPacketRead = true;
+										
+					return false;					
+				} // end if
+				else if (lastPacketRead) {
+					// receive from client
+					clientReceive();
+					// check to see if this is the packet that we want to lose
+					if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
+						if (verbose) {
+							System.out.println("ConnectionManagerESim: simulating a lost client ACK packet");
+							printInformation(receiveClientPacket);
+						}// end if
+						
+						return true;
+					}//end if
+					else { // this is not the packet we want to lose, send it to server
+						serverSend();
+						return true; //we're done, shut down thread
+					}// end else
+				}//end else if
+			}// end else if
+			
+			// ************* DATA PACKET ***************
+			else if (packetType == 3){ // check to lose a DATA packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to lose a DATA packet");
+				if (!firstPacket) {
+					// receive from client
+					clientReceive();
+				}// end if
+				firstPacket = false; // this is no longer the first packet
+
+				serverSend();
+
+				// we need to wait on a server packet
+				serverReceive();
+				// check to see if this is the packet that we want to lose
+				if (foundPacket(receiveServerPacket)) { // this is the packet we want to lose
+					if (verbose) {
+						System.out.println("ConnectionManagerESim: simulating a lost server DATA packet");
+						printInformation(receiveServerPacket);
+					}// end if
+					//we go back to operating as normal
+					mode = 0;
+
+					// wait on server to resend DATA
+					serverReceive();
+				}//end if
+
+				//send to the client
+				clientSend();
+				//check to see if this is the last packet (DATA < 512b 
+				if(sendClientPacket.getLength() < DATA_SIZE)
+					lastPacketRead = true;
+
+				return false;					
+			} // end else if
 		}//end if
+		else if (requestType == Request.WRITE){ // this is a write request
+			if (verbose)
+				System.out.println("ConnectionManagerESim: lost op Request is a write");
+			// ************* WRQ PACKET ***************			
+			if (packetType == 2) { // lose a WRQ packet
+				if (verbose){
+					System.out.println("ConnectionManagerESim: simulating a lost client WRQ packet");
+					printInformation(receiveClientPacket);
+				}//end if
+				return true; 
+			}// end if
+							
+			// ************* ACK PACKET ***************
+			else if (packetType == 4){ // check to lose a ACK packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to lose ACK packet");
+				if (firstPacket) { // if this is the first packet
+					
+					serverSend();
+					
+					serverReceive();
+					if(foundPacket(receiveServerPacket)) { // this is the ACK 00 that we lost
+						if (verbose) {
+							System.out.println("ConnectionManagerESim: simulating a lost server ACK 00 packet");
+							printInformation(receiveServerPacket);
+						}// end if
+						return true;
+					}// end if
+					else { // ACK 00 is not the packet we were looking for
+						firstPacket = false; // this is no longer the first packet
+						clientSend();
+						return false;
+					}//end else	
+				}// end if		
+				clientReceive();
+				// check to see if packet is < 512 bytes
+				if (receiveClientPacket.getLength() < DATA_SIZE) {
+					lastPacketWrite = true;
+				}
 
-		System.out.println("ConnectionManageESim: Received packet from client. Preparing packet to send to Server");
-		
+				serverSend();
 
-		// prepare the new send packet to the server
-		try {
-			sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
-		} // end try 
-		catch (UnknownHostException uhe) {
-			System.err.println("Unknown host exception error: " + uhe.getMessage());
-		} // end catch
+				// we need to wait on a server packet
+				serverReceive();
+				// check to see if this is the packet that we want to lose
+				if (foundPacket(receiveServerPacket)) { // this is the packet we want to lose
+					if (verbose) {
+						System.out.println("ConnectionManagerESim: simulating a lost server ACK packet");
+						printInformation(receiveServerPacket);
+					}// end if
 
-		if(verbose)
-			printInformation(sendServerPacket);
+					// check to see if this is the last packet
+					if (lastPacketWrite) { // this is the last ACK packet that we are sending back to the client
+						return true;
+					}
+					else {
+						//we go back to operating as normal
+						mode = 0;
+						return false;
+					}
+				}//end if
 
-		// send the packet to the server via the send/receive socket to server port
-		try {
-			serverSocket.send(sendServerPacket);
-		} // end try 
-		catch (IOException ioe) {
-			System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		} // end catch
+				//send to the client
+				clientSend();
+				
+				// we just sent the last ACK packet to the client, we are done.
+				if (lastPacketWrite)
+					return true;
+				else
+					return false;
+			}// end else if
+			
+			// ************* DATA PACKET ***************
+			else if (packetType == 3){ // check to lose a DATA packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to lose a DATA packet");
+				
+				if (!firstPacket) {
+					// receive from client
+					clientReceive();
+				}// end if
+				firstPacket = false; // this is no longer the first packet
+				
+				//checking to see if this is the packet that we want to lose
+				if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
+					if (verbose) {
+						System.out.println("ConnectionManagerESim: simulating a lost client DATA packet");
+						printInformation(receiveClientPacket);
+					}// end if
+					//we go back to operating as normal
+					mode = 0;
 
-		// print confirmation message that the packet has been sent to the server
-		System.out.println("Packet sent to server");
-		if (lastPacketRead == true)	
-		{
-			return true;	// Last packet is now sent. The thread will close
-		}
-		if (requestType == Request.WRITE && !firstPacket)
-		{
-			if(sendServerPacket.getLength() < DATA_SIZE)
-			{
-				lastPacketWrite = true;	
-			}
-		
-		}
+					return false;
+				}//end if
+				
+				// send to the server
+				serverSend();
 
-		//*********************************************************************************
-
-		byte response[] = new byte[DATA_SIZE];
-
-		receiveServerPacket = new DatagramPacket(response, response.length);
-
-		System.out.println("******************************************************");
-		System.out.println("ConnectrionManagerESim: waiting to receive a packet from server...\n");
-
-		// block until you receive a packet from the server
-		try {
-			serverSocket.receive(receiveServerPacket);
-		} // end try 
-		catch (IOException ioe) {
-			System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		} // end catch
-
-		// check to see if this is the packet that we want to lose
-		if (!isLost && foundPacket(receiveServerPacket)) {
-			if (verbose) {
-				System.out.println("ConnectionManagerESim: simulating a lost packet");
-				printInformation(receiveServerPacket);
-			}
-			isLost = true;
-			return false;
-		}
-		
-		response = receiveServerPacket.getData();
-		if(verbose) // print out information about the packet received from the server if verbose
-			printInformation(receiveServerPacket);
-
-		// set the serverPort to the port we have just received it from (meaning to the Server Thread that will deal with this request
-		serverPort = receiveServerPacket.getPort();
-
-		// prepare the new send packet to the client
-		try {
-			sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), clientPort);
-		} // end try
-		catch (UnknownHostException uhe) {
-			uhe.printStackTrace();
-			System.exit(1);
-		} // end catch
-		System.out.println("ErrorSim will attempt to send response back to client...\n");
-
-		if(verbose) // print out information about the packet being sent to the client
-			printInformation(sendClientPacket);
-
-		// send the packet to the client via the send socket 
-		try {
-			clientSocket.send(sendClientPacket);
-
-		} // end try 
-		catch (IOException ioe) {
-			System.err.println("Unknown IO exception error: " + ioe.getMessage());
-		} // end catch
-
-		// print confirmation message that the packet has been sent to the client
-		System.out.println("Response packet sent to client");
-		firstPacket = false;		// any following packets the connection manager receives will be not the second packet
-		if (lastPacketWrite == true)
-		{
-			return true;	// Last packet is now sent. The thread will close
-		}
-		if (requestType == Request.READ && !firstPacket)	
-		{
-			if(sendClientPacket.getLength() < DATA_SIZE)
-			{
-				lastPacketRead = true;
-			}
-		}
+				if (sendServerPacket.getLength() < DATA_SIZE)
+					lastPacketWrite = true;
+				
+				// we need to wait on a server packet
+				serverReceive(); 
+				
+				//send to the client
+				clientSend();
+				
+				return false;					
+			} // end else if
+		}//end if
 		return false;
 	}
 	
@@ -607,7 +687,7 @@ public class ConnectionManagerESim extends Thread {
 
 		// print confirmation message that the packet has been sent to the client
 		if (verbose)
-			System.out.println("Response packet sent to client");
+			System.out.println("ConnectionManagerESim: response packet sent to client");
 	}
 	
 	/**
@@ -763,7 +843,7 @@ public class ConnectionManagerESim extends Thread {
 	private byte[] blockNumber(DatagramPacket p) {
 		byte[] blockNum = {p.getData()[2], p.getData()[3]};
 		if (verbose)
-			System.out.println("Block number: " + Integer.toHexString(blockNum[0]) + Integer.toHexString(blockNum[1]));
+			System.out.println("Block number: " + Integer.toHexString(blockNum[0]) + "" + Integer.toHexString(blockNum[1]));
 		return blockNum;
 	} // end method
 	
