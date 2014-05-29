@@ -315,7 +315,7 @@ public class Client extends Thread {
 					System.out.println("Client has timed out 5 times waiting for the next ack packet from server");
 					return;
 				}
-				if (endFile && worked)
+				if (endFile && worked) // breaks if endfile and the it received a response
 					break;
 				} // end whileloop
 				if (endFile)
