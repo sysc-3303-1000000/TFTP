@@ -73,12 +73,12 @@ public class Client extends Thread {
 	/**
 	 * Send and receive procedure for the packet
 	 * this procedure will also be able to accept a request depending on its arguments
-	 * @param rqstMsg a byte array which will have the message attached to the packet being sent
+	 * @param req the type of request we are going to service
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Added implementation of reading and writing
-	 * @version May 20 2014
+	 * Latest Change: Changed a few errors in the write for ending to early
+	 * @version May 29 2014
 	 * @author Kais
 	 * 
 	 */
@@ -251,7 +251,7 @@ public class Client extends Thread {
 					System.out.println("File Not Found: " + e.toString());
 					System.exit(0);
 				} // end catch 
-				catch (IOException e) {
+				catch (IOException e) { // respond with error packet 0501_0 at this point, then terminate
 					System.out.println("IO Exception: " + e.toString());
 					System.exit(0);
 				} // end catch
@@ -275,7 +275,6 @@ public class Client extends Thread {
 					System.err.println("Unknown host exception error: " + uhe.getMessage());
 				} // end catch
 				System.out.println("created the following data packet to send off");
-				printInformation(sendData);
 				}
 				else {
 					ackNumber[1]--;
@@ -288,14 +287,13 @@ public class Client extends Thread {
 				numberOfTimeouts = 0;
 				
 				while(!worked) {
+				printInformation(sendData);
 				try {
 					sendReceiveSocket.send(sendData);
 				} // end try
 				catch (IOException ioe) {
 					System.err.println("Unknown IO exception error: " + ioe.getMessage());
 				} // end catch
-				if (endFile)
-					break;
 				byte reply[] = new byte[4];
 				receivePacket = new DatagramPacket(reply, reply.length);
 
@@ -314,9 +312,11 @@ public class Client extends Thread {
 					worked = false;
 				} // end catch
 				if (numberOfTimeouts == 5) {
-					System.out.println("Client has timed out 3 times waiting for the next ack packet from server");
+					System.out.println("Client has timed out 5 times waiting for the next ack packet from server");
 					return;
 				}
+				if (endFile && worked)
+					break;
 				} // end whileloop
 				if (endFile)
 					break;
