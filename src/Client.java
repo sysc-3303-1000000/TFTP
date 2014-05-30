@@ -77,8 +77,8 @@ public class Client extends Thread {
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Changed a few errors in the write for ending to early
-	 * @version May 29 2014
+	 * Latest Change: Added functionality to send error packets 1 2 and 3, and to handle receiving error packets
+	 * @version May 30 2014
 	 * @author Kais
 	 * 
 	 */
@@ -152,9 +152,37 @@ public class Client extends Thread {
 			blockNum = 1;
 			ackNum = 1;
 			while(true) { 
-				try {
-					if (verifydata(dataNumber, receivePacket))
-						WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));// make sure if we receive a duplicate data packet, we only write the first one
+					if (verifydata(dataNumber, receivePacket)) {
+						try {
+							WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));// make sure if we receive a duplicate data packet, we only write the first one
+						}
+						catch (FileNotFoundException e) { // respond with error packet 0502_0 at this point, then terminate client thread
+							byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one.").getBytes();
+							try {
+								sendReceiveSocket.send(new DatagramPacket(createErrorMsg(two, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+							} catch (UnknownHostException e1) {
+								System.err.println("Unknown Host: " + e1.toString());
+							} catch (IOException e1) {
+								System.err.println("IO Exception: " + e1.toString());
+							}
+							return;
+						} // end catch
+						catch (SyncFailedException sfe) { // respond with error packet 0503_0 at this point, then terminate client thread
+							byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again.").getBytes();
+							try {
+								sendReceiveSocket.send(new DatagramPacket(createErrorMsg((byte)3, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+							} catch (UnknownHostException e1) {
+								System.err.println("Unknown Host: " + e1.toString());
+							} catch (IOException e1) {
+								System.err.println("IO Exception: " + e1.toString());
+							}
+							return;
+						} // end catch
+						catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} // end catch
+					}
 					else {
 						dataNumber[1]--;
 						if(dataNumber[1] == 255) {
@@ -163,15 +191,6 @@ public class Client extends Thread {
 						ackNum--;
 						blockNum--;
 					} // end else
-				} // end try 
-				catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} // end catch 
-				catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} // end catch
 				
 				ack[0] = (byte)0;
 				ack[1] = (byte)4;
@@ -247,11 +266,18 @@ public class Client extends Thread {
 				try {
 					fileData = ReadFromFile(blockNum);
 				} // end try
-				catch (FileNotFoundException e) {
-					System.out.println("File Not Found: " + e.toString());
-					System.exit(0);
+				catch (FileNotFoundException e) { // respond with error packet 0501_0 at this point, then terminate client thread
+					byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again.").getBytes();
+					try {
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+					} catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					}
+					return;
 				} // end catch 
-				catch (IOException e) { // respond with error packet 0501_0 at this point, then terminate
+				catch (IOException e) { 
 					System.out.println("IO Exception: " + e.toString());
 					System.exit(0);
 				} // end catch
@@ -378,8 +404,9 @@ public class Client extends Thread {
 	 * The following is the method used to write data to a file, done if client requests a read
 	 * @param blockNum the block which is to be written
 	 * @param writeData the data which is to be written
-	 * @throws FileNotFoundException if the file cannot be found
+	 * @throws FileNotFoundException if the file cannot be found to right to, meaning we have an access violation
 	 * @throws IOException if there is an issue with IO
+	 * @throws SyncFailedException if the disk if full
 	 * 
 	 * @since May 17 2014
 	 * 
@@ -388,11 +415,12 @@ public class Client extends Thread {
 	 * @author Colin
 	 * 
 	 */
-	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
+	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException, SyncFailedException
 	{
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(directory + "\\output" + filenameString, (blockNum > 1) ? true : false));
+		FileOutputStream out = new FileOutputStream(directory + "\\output" + filenameString, (blockNum > 1) ? true : false);
 		System.out.println("write datas length " + writeData.length);
 		out.write(writeData, 0, writeData.length);
+		out.getFD().sync();
 		out.close();
 
 	} // end method
@@ -468,6 +496,36 @@ public class Client extends Thread {
 		System.out.println("\n\n");
 
 	} // end method
+	
+	/**
+	 * Following method will create an error message which will be put into a packet and sent to the server
+	 * @param type the type of error we have encountered on the client side
+	 * @param errorMsg the corresponding error message for the type of error
+	 * @return the message which will be put into a packet and sent to the server
+	 * 
+	 * @since May 30 2014
+	 * 
+	 * Latest Change: Added implementation for the function
+	 * @version May 30 2014
+	 * @author Kais
+	 */
+	private byte[] createErrorMsg(byte type, byte errorMsg[]) {
+		byte msg[] = new byte[5 + errorMsg.length];
+		
+		/* Form the Error packet header */
+		msg[0] = zero;
+		msg[1] = (byte)5;
+		msg[2] = zero;
+		msg[3] = type;
+		/* Insert the error message */
+		for(int i = 0; i < errorMsg.length; i++)
+			msg[i+4] = errorMsg[i];
+		
+		/* Add the footer */
+		msg[msg.length -1] = zero;
+		
+		return msg;
+	}
 
 	/**
 	 * Following method will create the message which is being put into the packet
@@ -497,7 +555,7 @@ public class Client extends Thread {
 
 		// add the file bytes starting at index 2
 		for (int i = 0; i<file.length; i++) {
-			msg[msgIndex] = file[byteCount];
+			msg[i+2] = file[i];
 			byteCount++;
 			msgIndex++;
 		} // end forloop
