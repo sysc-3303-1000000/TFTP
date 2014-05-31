@@ -707,7 +707,7 @@ public class ConnectionManagerESim extends Thread {
 							return true;
 						}
 						return false;
-					}
+					}// end else
 				} // end if
 
 				clientSend();
@@ -784,25 +784,14 @@ public class ConnectionManagerESim extends Thread {
 		}// end else if
 
 		else if (requestType == Request.WRITE) { // this is a write request
-			if (packetType == 3) { // DATA packet being duplicated from the server 
+			if (packetType == 3) { // DATA packet being duplicated from the client 
 				if (!firstPacket)
 					clientReceive();
 				firstPacket = false;
-				serverSend();
-				if (!firstPacket) {
-					if (verbose)
-						System.out.println("Checking if this packet size is less than 512:");
-					printInformation(sendServerPacket);
-					if(sendServerPacket.getLength() < DATA_SIZE)
-						lastPacketWrite = true;	
-				} // end if
-
-				serverReceive();
-				// check  to see if this is the data packet we want to duplicate
-				if (foundPacket(receiveServerPacket)) {
+				if (foundPacket(receiveClientPacket)){
 					if (verbose)
 						System.out.println("ConnectionManagerESim: DATA packet will be duplicated. Sending first packet");
-					clientSend();
+					serverSend();
 					if(verbose)
 						System.out.println("ConnectionManagerESim: Thread will sleep now");
 					try {
@@ -813,36 +802,63 @@ public class ConnectionManagerESim extends Thread {
 						System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
 					// switch back to normal operation
 					mode = 0;
-					clientSend();
-					// this will ensure that we exit out of the program if we are duplicating the last DATA packet
-					if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])	
-						return true;	// Last packet is now sent. The thread will close
-					clientReceive(); // fetches next ack (ack 02)
 					serverSend();
 					if (!firstPacket) {
 						if (verbose)
 							System.out.println("Checking if this packet size is less than 512:");
 						printInformation(sendServerPacket);
-						if(sendServerPacket.getLength() < DATA_SIZE)
+						if(sendServerPacket.getLength() < DATA_SIZE) {
 							lastPacketWrite = true;	
+							trueLastPacket[0] = sendServerPacket.getData()[2];
+							trueLastPacket[1] = sendServerPacket.getData()[3];
+						}//end if
 					} // end if
+					serverReceive();
+					clientSend();
+					if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]){	
+						return true;	// Last packet is now sent. The thread will close
+					}// end if
 					else {
-						serverReceive();
-						clientSend();
-						if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])	
-							return true;	// Last packet is now sent. The thread will close
 						clientReceive();
 						serverSend();
 						if (!firstPacket) {
 							if (verbose)
 								System.out.println("Checking if this packet size is less than 512:");
 							printInformation(sendServerPacket);
-							if(sendServerPacket.getLength() < DATA_SIZE)
+							if(sendServerPacket.getLength() < DATA_SIZE) {
 								lastPacketWrite = true;	
+								trueLastPacket[0] = sendServerPacket.getData()[2];
+								trueLastPacket[1] = sendServerPacket.getData()[3];
+							}//end if
 						} // end if
+						serverReceive();
+						clientSend();
+						if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]){	
+							return true;	// Last packet is now sent. The thread will close
+						}// end if
+						serverReceive();
+						clientSend();
+						if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]){	
+							return true;	// Last packet is now sent. The thread will close
+						}// end if
 						return false;
-					}
+					}// end else
+				}// end if
+				
+
+				serverSend();
+				if (!firstPacket) {
+					if (verbose)
+						System.out.println("Checking if this packet size is less than 512:");
+					printInformation(sendServerPacket);
+					if(sendServerPacket.getLength() < DATA_SIZE) {
+						lastPacketWrite = true;	
+						trueLastPacket[0] = sendServerPacket.getData()[2];
+						trueLastPacket[1] = sendServerPacket.getData()[3];
+					}//end if
 				} // end if
+
+				serverReceive();
 
 				clientSend();
 				if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])	
