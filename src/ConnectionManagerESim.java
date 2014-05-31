@@ -35,6 +35,7 @@ public class ConnectionManagerESim extends Thread {
 	private boolean end = false;
 	byte rly[] = new byte[DATA_SIZE]; // this will store the reply from the client
 	byte response[] = new byte[DATA_SIZE]; // this will store the response from the server
+	byte trueLastPacket[] = new byte[2]; // will store the block number of the truly last packet to verify if we have received it or not
 	/**
 	 * The following is the constructor for ListenerESim
 	 * @param verbose whether verbose mode is enabled
@@ -172,16 +173,11 @@ public class ConnectionManagerESim extends Thread {
 
 		serverSend();
 		if (lastPacketRead == true)	
-		{
 			return true;	// Last packet is now sent. The thread will close
-		}
-		if (requestType == Request.WRITE && !firstPacket)
-		{
+		if (requestType == Request.WRITE && !firstPacket) {
 			if(sendServerPacket.getLength() < DATA_SIZE)
-			{
 				lastPacketWrite = true;	
-			}
-		}
+		} // end if
 
 		//*********************************************************************************
 
@@ -190,16 +186,11 @@ public class ConnectionManagerESim extends Thread {
 		clientSend();
 		firstPacket = false;		// any following packets the connection manager receives will be not the second packet
 		if (lastPacketWrite == true)
-		{
 			return true;	// Last packet is now sent. The thread will close
-		}
-		if (requestType == Request.READ && !firstPacket)	
-		{
-			if(sendClientPacket.getLength() < DATA_SIZE)
-			{
+		if (requestType == Request.READ && !firstPacket) {
+			if(sendClientPacket.getLength() < DATA_SIZE) 
 				lastPacketRead = true;
-			}
-		}
+		} // end if
 			
 			return false;
 	}
@@ -439,187 +430,399 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: Increased possible delay and made it to return the boolean value
-	 * @version May 24 2014
+	 * Latest Change: Allow user to specify which packet to delay and by how much
+	 * @version May 29 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */
 	private boolean delayedOp()
 	{
-		double rando = randoNum();	//Random number from 1-10
-		if(rando <= PERCENTPASS)	//Check if the Random number is less than the percent pass
-		{
-			System.out.println("Delayed packet will not be simulated, normal operation will continue");
-			return normalOp();	//Normal forward operation
-		}
-		else
-		{
-			System.out.println("Packet will be delayed. Thread will sleep now");
+		// check to see if the which packet is the one being delayed
+		if (packetType == 1 || packetType == 2) { // RRQ or WRQ packet is being delayed
+			
+			if(verbose)
+				System.out.println("ConnectionManagerESim: RRQ/WRQ packet will be delayed. Thread will sleep now");
 			try {
-                Thread.sleep(delay);	//delays the packet for the specified amount
-            } catch (InterruptedException e)
-            {}
-			System.out.println("*************Packet was delayed by: " + delay + "ms!************");
-			System.out.println("Normal operation will continue now");
-			return normalOp();
-		}
+				Thread.sleep(delay);	//delays the packet for the specified amount
+			}// end  try
+			catch (InterruptedException e) { } // end catch
+			
+			System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+			
+			serverSend();
+			
+			serverReceive();
+			
+			clientSend();
+			
+			// switch back to normal operation
+			mode = 0;
+			
+			firstPacket = false;
+			return false;
+		}// end if
+		
+		// now we check if this is a read or write so we can delay on the appropriate packet
+		else if (requestType == Request.READ) { // this is a read request
+				if (packetType == 3) { // DATA packet being delayed from the server 
+					
+					if (!firstPacket)
+						clientReceive();
+					
+					serverSend();
+					if (lastPacketRead == true)	
+						return true;	// Last packet is now sent. The thread will close
+					serverReceive();
+					// check  to see if this is the data packet we want to delay
+					if (foundPacket(receiveServerPacket)) {
+						if(verbose)
+							System.out.println("ConnectionManagerESim: DATA packet will be delayed. Thread will sleep now");
+						try {
+							Thread.sleep(delay);	//delays the packet for the specified amount
+						}// end try
+						catch (InterruptedException e) { } // end catch
+					
+						System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+						// switch back to normal operation
+						mode = 0;
+					} // end if
+					
+					clientSend();
+					if (!firstPacket) {
+						if(sendClientPacket.getLength() < DATA_SIZE) 
+							lastPacketRead = true;
+					} // end if
+					firstPacket = false;
+					return false;
+				}// end if
+				
+				else if (packetType == 4) { // ACK packet being delayed from the client 
+					
+					if (!firstPacket) {
+						clientReceive();
+						// check  to see if this is the ACK packet we want to delay
+						if (foundPacket(receiveClientPacket)) {
+							if(verbose)
+								System.out.println("ConnectionManagerESim: ACK packet will be delayed. Thread will sleep now");
+							try {
+								Thread.sleep(delay);	//delays the packet for the specified amount
+							}// end try
+							catch (InterruptedException e) { } // end catch
+						
+							System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+							// switch back to normal operation
+							mode = 0;
+						} // end if
+					}
+					serverSend();
+					if (lastPacketRead == true)	
+						return true;	// Last packet is now sent. The thread will close
+					
+					serverReceive();
+					clientSend();
+					if (!firstPacket) {
+						if(sendClientPacket.getLength() < DATA_SIZE) 
+							lastPacketRead = true;
+					} // end if	
+					firstPacket = false;
+					return false;
+				}// end if
+		}// end else if
+		
+		else if (requestType == Request.WRITE) { // this is a write request
+				if (packetType == 4) { // ACK packet being delayed from the server 
+					
+					if (!firstPacket)
+						clientReceive();
+					
+					serverSend();
+					if (!firstPacket) {
+						if(sendServerPacket.getLength() < DATA_SIZE)
+							lastPacketWrite = true;	
+					} // end if
+					serverReceive();
+					// check  to see if this is the ACK packet we want to delay
+					if (foundPacket(receiveServerPacket)) {
+						if(verbose)
+							System.out.println("ConnectionManagerESim: ACK packet will be delayed. Thread will sleep now");
+						try {
+							Thread.sleep(delay);	//delays the packet for the specified amount
+						}// end try
+						catch (InterruptedException e) { } // end catch
+					
+						System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+						// switch back to normal operation
+						mode = 0;
+					} // end if
+					
+					clientSend();
+					if (lastPacketWrite == true)
+						return true;	// Last packet is now sent. The thread will close
+					firstPacket = false;
+					return false;
+				}// end if
+				
+				else if (packetType == 3) { // DATA packet being delayed from the client 
+					
+					if (!firstPacket) {
+						clientReceive();
+						// check  to see if this is the DATA packet we want to delay
+						if (foundPacket(receiveClientPacket)) {
+							if(verbose)
+								System.out.println("ConnectionManagerESim: DATA packet will be delayed. Thread will sleep now");
+							try {
+								Thread.sleep(delay);	//delays the packet for the specified amount
+							}// end try
+							catch (InterruptedException e) { } // end catch
+						
+							System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+							// switch back to normal operation
+							mode = 0;
+						} // end if
+					}
+					serverSend();
+					if (!firstPacket) {
+						if(sendServerPacket.getLength() < DATA_SIZE)
+							lastPacketWrite = true;	
+					} // end if
+					serverReceive();
+					clientSend();
+					if (lastPacketWrite == true)
+						return true;	// Last packet is now sent. The thread will close			
+					firstPacket = false;
+					return false;
+				}// end if
+		}// end else if
+		
+		return false;
 	}
 	
 	/**
 	 * The following is the run method for ConnectionManagerESim with a duplicated packet, used to execute code upon starting the thread. 
-	 * We will duplicate if rando is less than the PERCENTPASS, but the difference is that we will alternate from duplicating the packets being sent to the client 
-	 * or we will duplicate sending to the server. This is done by generating another random number to determine if we duplicate server or client
-	 * 
-	 * If random number for duplicate <= 5: duplicate server packets
-	 * If random number > 5: duplicate client packets
+	 * We will duplicate the specified packet by the user
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: Run with Duplicated packets method added, full implementation added
-	 * @version May 21 2014
+	 * Latest Change: Accept a user input as to which packet to duplicate and how much space between
+	 * @version May 29 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong  
 	 */
 	private boolean duplicatedOp()
 	{
-		double rando = randoNum();	//Random number from 1-10
-		if(rando <= PERCENTPASS) {	//Check if the Random number is less than the percent pass
-			// normal operation
-			System.out.println("Duplicate packet will not be simulated, normal operation will continue");
-			return normalOp();
-		}
-		else {
-			System.out.println("Duplicate packet will be simulated");
-			// generate a random number to see if we duplicate client or server
-			double duplicate = randoNum(); // Random number from 1-10;
-			// this is not the first packet, we need to wait for the client to send back to us
-			if (!firstPacket) {
-				byte rly[] = new byte[DATA_SIZE];
-				receiveClientPacket = new DatagramPacket(rly, rly.length);
-				try { // wait to receive client packet
-					clientSocket.receive(receiveClientPacket);
-				}//end try 
-				catch (IOException ie) {
-					System.err.println("IOException error: " + ie.getMessage());
-				}//end catch
-
-				System.out.println("ConnectionManagerESim: Received packet from client");
-				printInformation(receiveClientPacket);
-				// updating the data and length in the packet being sent to the server
-				data = receiveClientPacket.getData();
-				length = receiveClientPacket.getLength();
-
-			}//end if
-
-			System.out.println("ConnectionManageESim: Received packet from client. Preparing packet to send to Server");
-			// prepare the new send packet to the server
-			try {
-				sendServerPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), serverPort);
-			} // end try 
-			catch (UnknownHostException uhe) {
-				System.err.println("Unknown host exception error: " + uhe.getMessage());
-			} // end catch
-
+		// check to see if the which packet is the one being duplicated
+		if (packetType == 1 || packetType == 2) { // RRQ or WRQ packet is being duplicated
+			if (verbose)
+				System.out.println("ConnectionManagerESim: RRQ/WRQ packet will be duplicated. Sending first packet");
+			serverSend();
 			if(verbose)
-				printInformation(sendServerPacket);
-
-			// send the packet to the server TWICE via the send/receive socket to server port
+				System.out.println("ConnectionManagerESim: Thread will sleep now");
 			try {
-				serverSocket.send(sendServerPacket);
-				
-				// if the number generated for duplicate is <= 5, send the server packet twice 
-				if (duplicate <= 10) {
-					System.out.println("The packet being sent to the server will be duplicated");
-					try {
-						Thread.sleep(delay);
-					} catch (InterruptedException e) {}
-					serverSocket.send(sendServerPacket);				
-				} // end try 
-			} catch (IOException ioe) {
-				System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			} // end catch
+				Thread.sleep(delay);	//delays the packet for the specified amount
+			}// end  try
+			catch (InterruptedException e) { } // end catch
+			if (verbose)
+				System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
+			serverSend();
 
-			// print confirmation message that the packet has been sent to the server
-			System.out.println("Packet sent to server");
-			if (lastPacketRead)	
-			{
-				return true;	// Last packet is now sent. The thread will close
-			}
-			if (requestType == Request.WRITE && !firstPacket)
-			{
-				if(sendServerPacket.getLength() < DATA_SIZE)
-				{
-					lastPacketWrite = true;	
-				}
-			}
+			serverReceive();
 
-			//*********************************************************************************
+			clientSend();
 
-			byte response[] = new byte[DATA_SIZE];
+			// switch back to normal operation
+			mode = 0;
 
-			receiveServerPacket = new DatagramPacket(response, response.length);
-
-			System.out.println("******************************************************");
-			System.out.println("ConnectrionManagerESim: waiting to receive a packet from server...\n");
-
-			// block until you receive a packet from the server
-			try {
-				serverSocket.receive(receiveServerPacket);
-			} // end try 
-			catch (IOException ioe) {
-				System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			} // end catch
-
-			response = receiveServerPacket.getData();
-			if(verbose) // print out information about the packet received from the server if verbose
-				printInformation(receiveServerPacket);
-
-			// set the serverPort to the port we have just received it from (meaning to the Server Thread that will deal with this request
-			serverPort = receiveServerPacket.getPort();
-
-			// prepare the new send packet to the client
-			try {
-				sendClientPacket = new DatagramPacket(response, receiveServerPacket.getLength(), InetAddress.getLocalHost(), clientPort);
-			} // end try
-			catch (UnknownHostException uhe) {
-				uhe.printStackTrace();
-				System.exit(1);
-			} // end catch
-			System.out.println("ErrorSim will attempt to send response back to client...\n");
-
-			if(verbose) // print out information about the packet being sent to the client
-				printInformation(sendClientPacket);
-
-			// send the packet to the client via the send socket 
-			try {
-				clientSocket.send(sendClientPacket);
-
-				// if the number generated for duplicate is > 5, send the client packet twice 
-				/*if (duplicate > 5) {
-					System.out.println("The packet being sent to the client will be duplicated");
-					try {
-						Thread.sleep(delay);
-					} catch (InterruptedException e) {}
-					serverSocket.send(sendClientPacket);				
-				} // end try */
-			} catch (IOException ioe) {
-				System.err.println("Unknown IO exception error: " + ioe.getMessage());
-			}
-
-			// print confirmation message that the packet has been sent to the client
-			System.out.println("Response packet sent to client");
-			firstPacket = false;		// any following packets the connection manager receives will be not the second packet
-			if (lastPacketWrite == true)
-			{
-				return true;	// Last packet is now sent. The thread will close
-			}
-			if (requestType == Request.READ && !firstPacket)	
-			{
-				if(sendClientPacket.getLength() < DATA_SIZE)
-				{
-					lastPacketRead = true;
-				}
-			}
-
+			firstPacket = false;
 			return false;
-		}
+		}// end if
+
+		// now we check if this is a read or write so we can duplicate on the appropriate packet
+		else if (requestType == Request.READ) { // this is a read request
+			if (packetType == 3) { // DATA packet being duplicated from the server 
+
+				if (!firstPacket)
+					clientReceive();
+
+				serverSend();
+				if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])	
+					return true;	// Last packet is now sent. The thread will close
+				
+				serverReceive();
+				// check  to see if this is the data packet we want to duplicate
+				if (foundPacket(receiveServerPacket)) {
+					if (verbose)
+						System.out.println("ConnectionManagerESim: DATA packet will be duplicated. Sending first packet");
+					clientSend();
+					if(verbose)
+						System.out.println("ConnectionManagerESim: Thread will sleep now");
+					try {
+						Thread.sleep(delay);	//delays the packet for the specified amount
+					}// end try
+					catch (InterruptedException e) { } // end catch
+					
+					if (verbose)
+						System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
+					// switch back to normal operation
+					mode = 0;
+					clientSend();
+					if (!firstPacket) {
+						if(sendClientPacket.getLength() < DATA_SIZE) { 
+							lastPacketRead = true;
+							trueLastPacket[0] = sendClientPacket.getData()[2];
+							trueLastPacket[1] = sendClientPacket.getData()[3];
+						}
+					} // end if
+					System.out.println("ConnectionManagerESim: cR1");
+					clientReceive();
+					System.out.println("ConnectionManagerESim: sS2");
+					serverSend();
+					if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])	
+						return true;	// Last packet is now sent. The thread will close
+					System.out.println("ConnectionManagerESim: cR3");
+					clientReceive();
+					System.out.println("ConnectionManagerESim: sS3");
+					serverSend();
+					if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])	
+						return true;	// Last packet is now sent. The thread will close
+					System.out.println("ConnectionManagerESim: sR3");
+					serverReceive();
+					System.out.println("ConnectionManagerESim: cS4");
+					clientSend();
+					if (!firstPacket) {
+						if(sendClientPacket.getLength() < DATA_SIZE) { 
+							lastPacketRead = true;
+							trueLastPacket[0] = sendClientPacket.getData()[2];
+							trueLastPacket[1] = sendClientPacket.getData()[3];
+						}
+					} // end if
+					System.out.println("ConnectionManagerESim: cR5");
+					clientReceive();
+					System.out.println("ConnectionManagerESim: sS6");
+					serverSend();
+					return true;
+				} // end if
+
+				clientSend();
+				if (!firstPacket) {
+					if(sendClientPacket.getLength() < DATA_SIZE) { 
+						lastPacketRead = true;
+						trueLastPacket[0] = sendClientPacket.getData()[2];
+						trueLastPacket[1] = sendClientPacket.getData()[3];
+					}
+				} // end if
+				firstPacket = false;
+				return false;
+			}// end if
+
+			else if (packetType == 4) { // ACK packet being duplicate from the client 
+
+				if (!firstPacket) {
+					clientReceive();
+					// check  to see if this is the ACK packet we want to duplicate
+					if (foundPacket(receiveClientPacket)) {
+						if (verbose)
+							System.out.println("ConnectionManagerESim: ACK packet will be duplicated. Sending first packet");
+						serverSend();
+						if(verbose)
+							System.out.println("ConnectionManagerESim: Thread will sleep now");
+						try {
+							Thread.sleep(delay);	//delays the packet for the specified amount
+						}// end try
+						catch (InterruptedException e) { } // end catch
+
+						if (verbose)
+							System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
+						// switch back to normal operation
+						mode = 0;
+					} // end if
+				}
+				serverSend();
+				if (lastPacketRead == true)	
+					return true;	// Last packet is now sent. The thread will close
+				serverReceive();
+				clientSend();
+				if (!firstPacket) {
+					if(sendClientPacket.getLength() < DATA_SIZE) 
+						lastPacketRead = true;
+				} // end if	
+				firstPacket = false;
+				return false;
+			}// end if
+		}// end else if
+
+		else if (requestType == Request.WRITE) { // this is a write request
+			if (packetType == 4) { // ACK packet being duplicated from the server 
+
+				if (!firstPacket)
+					clientReceive();
+
+				serverSend();
+				if (lastPacketRead == true)	
+					return true;	// Last packet is now sent. The thread will close
+				if (!firstPacket) {
+					if(sendServerPacket.getLength() < DATA_SIZE)
+						lastPacketWrite = true;	
+				} // end if
+				serverReceive();
+				// check  to see if this is the data packet we want to duplicate
+				if (foundPacket(receiveServerPacket)) {
+					if (verbose)
+						System.out.println("ConnectionManagerESim: ACK packet will be duplicated. Sending first packet");
+					clientSend();
+					if(verbose)
+						System.out.println("ConnectionManagerESim: Thread will sleep now");
+					try {
+						Thread.sleep(delay);	//delays the packet for the specified amount
+					}// end try
+					catch (InterruptedException e) { } // end catch
+					
+					if (verbose)
+						System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
+					// switch back to normal operation
+					mode = 0;
+				} // end if
+
+				clientSend();
+				if (lastPacketWrite == true)
+					return true;	// Last packet is now sent. The thread will close
+				firstPacket = false;
+				return false;
+			}// end if
+
+			else if (packetType == 3) { // DATA packet being duplicate from the client 
+
+				if (!firstPacket) {
+					clientReceive();
+					// check  to see if this is the DATA packet we want to duplicate
+					if (foundPacket(receiveClientPacket)) {
+						if (verbose)
+							System.out.println("ConnectionManagerESim: DATA packet will be duplicated. Sending first packet");
+						serverSend();
+						if(verbose)
+							System.out.println("ConnectionManagerESim: Thread will sleep now");
+						try {
+							Thread.sleep(delay);	//delays the packet for the specified amount
+						}// end try
+						catch (InterruptedException e) { } // end catch
+
+						if (verbose)
+							System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
+						// switch back to normal operation
+						mode = 0;
+					} // end if
+				}
+				serverSend();
+				if (!firstPacket) {
+					if(sendServerPacket.getLength() < DATA_SIZE)
+						lastPacketWrite = true;	
+				} // end if
+				serverReceive();
+				clientSend();
+				if (lastPacketWrite == true)
+					return true;	// Last packet is now sent. The thread will close
+				firstPacket = false;
+				return false;
+			}// end if
+		}// end else if
+
+		return false;
 	}
 
 	/**
@@ -758,21 +961,6 @@ public class ConnectionManagerESim extends Thread {
 		// print confirmation message that the packet has been sent to the server
 		if (verbose)
 			System.out.println("Packet sent to server");
-	}
-	
-		
-	/**
-	 * The following is a method for a random number generator from 1-10 used to randomly generate errors
-	 * 
-	 * @since May 21 2014
-	 * 
-	 * Latest Change: randoNum method added, full implementation added
-	 * @version May 21 2014
-	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
-	 */
-	private double randoNum()
-	{
-		return Math.random()*10;
 	}
 	
 	/**

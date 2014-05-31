@@ -138,6 +138,18 @@ public class ErrorSim {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Delayed packet mode");
+			System.out.println("Please enter the type of packet you would like to delay:\n1 - RRQ\n2 - WRQ\n3 - DATA\n4 - ACK");
+			packetType = input.nextInt();
+			// check if it is a DATA or ACK that we are changing, grab which packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to lose: ");
+				packetNumber = input.nextInt();
+			}
+			
+			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			else {
+				packetNumber = 1;
+			}
 			System.out.println("Please enter the delay of the packet (3000 will be 3000 milliseconds): ");
 			delayAmount = input.nextInt();
 
@@ -147,6 +159,20 @@ public class ErrorSim {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Duplicate packet mode");
+			System.out.println("Please enter the type of packet you would like to duplicate:\n1 - RRQ\n2 - WRQ\n3 - DATA\n4 - ACK");
+			packetType = input.nextInt();
+			
+			// check if it is a DATA or ACK that we are changing, grab which packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to duplicate: ");
+				packetNumber = input.nextInt();
+			}
+			
+			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			else {
+				packetNumber = 1;
+			}
+			
 			System.out.println("Please enter the delay between the duplicated packet (3000 will be 3000 milliseconds): ");
 			delayAmount = input.nextInt();
 		}
