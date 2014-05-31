@@ -242,7 +242,7 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
-					if (receivePacket.getData()[1] == five) {
+					if (worked && receivePacket.getData()[1] == five) {
 						printErrorMsg(receivePacket.getData());
 						return;
 					} // end if
@@ -434,7 +434,6 @@ public class Client extends Thread {
 	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
 		FileOutputStream out = new FileOutputStream(directory + "\\output" + filenameString, (blockNum > 1) ? true : false);
-		System.out.println("write datas length " + writeData.length);
 		out.write(writeData, 0, writeData.length);
 		out.getFD().sync();
 		out.close();

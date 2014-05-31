@@ -120,7 +120,7 @@ public class ConnectionManager extends Thread {
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
-					if (receivedPacket.getData()[1] == (byte)5) {
+					if (worked && receivedPacket.getData()[1] == (byte)5) {
 						printErrorMessage(receivedPacket.getData());
 						return;
 					} // end if
@@ -145,6 +145,7 @@ public class ConnectionManager extends Thread {
 						catch (IOException e1) {
 							System.err.println("IO Exception: " + e1.toString());
 						} // end catch
+						System.out.println("Server sent error packet 2");
 						return;
 					} catch (SyncFailedException sfe) { // respond with error packet 0503_0 at this point, then terminate client thread
 						byte emsg[] = ("The file: " + fileName + " could not be written in the Server directory. Please ensure the server has write permission to the Server directory.").getBytes();
@@ -157,6 +158,7 @@ public class ConnectionManager extends Thread {
 						catch (IOException e1) {
 							System.err.println("IO Exception: " + e1.toString());
 						} // end catch
+						System.out.println("Server sent error packet 3");
 						return;
 					} // end catch
 					catch(FileAlreadyExistsException f){
@@ -170,6 +172,7 @@ public class ConnectionManager extends Thread {
 						catch (IOException e1) {
 							System.err.println("IO Exception: " + e1.toString());
 						} // end catch
+						System.out.println("Server sent error packet 6");
 						return;
 					}
 					catch (IOException e) {
@@ -315,6 +318,7 @@ public class ConnectionManager extends Thread {
 						catch (IOException e1) {
 							System.err.println("IO Exception: " + e1.toString());
 						} // end catch
+						System.out.println("Server sent error packet 1");
 						return;
 					} catch (IOException e) {
 						System.out.println("IO Exception: " + e.toString());
@@ -354,10 +358,11 @@ public class ConnectionManager extends Thread {
 	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException, SyncFailedException, FileAlreadyExistsException
 	{
 		if(blockNum == 1){
-			if(new File(System.getProperty("user.dir") + "\\Server\\output" + fileName).isFile())
+			if(new File(System.getProperty("user.dir") + "\\Server\\output" + fileName).isFile()){
 				throw new FileAlreadyExistsException();
+			}
 		}
-		
+		System.out.println("");
 		FileOutputStream out = new FileOutputStream(System.getProperty("user.dir") + "\\Server\\output" + fileName, (blockNum > 1) ? true : false);
 		out.write(writeData, 0, writeData.length);
 		out.getFD().sync();
@@ -399,10 +404,10 @@ public class ConnectionManager extends Thread {
 		msg[2] = (byte)0;
 		msg[3] = type;
 		
-		System.arraycopy(errorMessage, 0, msg, 4, errorMessage.length - 2);
+		System.arraycopy(errorMessage, 0, msg, 4, errorMessage.length);
 		
-		msg[errorMessage.length - 1] = (byte)0;
-		
+		msg[msg.length - 1] = (byte)0;
+				
 		return msg;
 	}
 	

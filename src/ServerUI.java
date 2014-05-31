@@ -7,8 +7,6 @@ public class ServerUI {
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		BufferedReader br = new BufferedReader( new InputStreamReader(System.in));
 		int exit = 0;
-		String directory = null;
-		String filename = null;
 		int rw;
 		int input = 0;
 
