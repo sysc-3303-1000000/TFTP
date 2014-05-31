@@ -228,8 +228,18 @@ public class ConnectionManager extends Thread {
 			try {
 				fileData = ReadFromFile(1);
 			} catch (FileNotFoundException e) {
-				System.out.println("File Not Found: " + e.toString());
-				System.exit(0);
+				byte emsg[] = ("The file: " + fileName + " could not be located in the Server directory. Please ensure you are specifying the correct file name and try again.").getBytes();
+				try {
+					send.send(new DatagramPacket(createErrorMessage((byte)1, emsg), 5 + emsg.length, InetAddress.getLocalHost(), port));
+				} // end try
+				catch (UnknownHostException e1) {
+					System.err.println("Unknown Host: " + e1.toString());
+				} // end catch
+				catch (IOException e1) {
+					System.err.println("IO Exception: " + e1.toString());
+				} // end catch
+				System.out.println("Server sent error packet 1");
+				return;
 			} catch (IOException e) {
 				System.out.println("IO Exception: " + e.toString());
 				System.exit(0);

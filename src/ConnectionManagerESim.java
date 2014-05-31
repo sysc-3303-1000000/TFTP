@@ -34,6 +34,7 @@ public class ConnectionManagerESim extends Thread {
 	private boolean lastPacketRead = false;
 	private boolean firstPacket = true;
 	private boolean end = false;
+	private boolean errorReceived = false;
 	byte clientReply[] = new byte[DATA_SIZE]; // this will store the reply from the client
 	byte serverReply[] = new byte[DATA_SIZE]; // this will store the reply from the server
 	byte serverData[] = new byte[DATA_SIZE]; // this will store the response from the server
@@ -174,7 +175,7 @@ public class ConnectionManagerESim extends Thread {
 		}//end if
 
 		serverSend();
-		if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])	
+		if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))	
 			return true;	// Last packet is now sent. The thread will close
 		if (requestType == Request.WRITE && !firstPacket) {
 			if (verbose)
@@ -190,7 +191,7 @@ public class ConnectionManagerESim extends Thread {
 
 		clientSend();
 		firstPacket = false;		// any following packets the connection manager receives will be not the second packet
-		if (lastPacketWrite == true)
+		if (errorReceived || lastPacketWrite)
 			return true;	// Last packet is now sent. The thread will close
 		if (requestType == Request.READ && !firstPacket) {
 			if (verbose)
@@ -480,7 +481,7 @@ public class ConnectionManagerESim extends Thread {
 					clientReceive();
 
 				serverSend();
-				if (lastPacketRead == true)	
+				if (errorReceived || lastPacketRead)	
 					return true;	// Last packet is now sent. The thread will close
 				serverReceive();
 				// check  to see if this is the data packet we want to delay
@@ -525,7 +526,7 @@ public class ConnectionManagerESim extends Thread {
 					} // end if
 				}
 				serverSend();
-				if (lastPacketRead == true)	
+				if (errorReceived || lastPacketRead)	
 					return true;	// Last packet is now sent. The thread will close
 
 				serverReceive();
@@ -566,7 +567,7 @@ public class ConnectionManagerESim extends Thread {
 				} // end if
 
 				clientSend();
-				if (lastPacketWrite == true)
+				if (errorReceived || lastPacketWrite)
 					return true;	// Last packet is now sent. The thread will close
 				firstPacket = false;
 				return false;
@@ -597,7 +598,7 @@ public class ConnectionManagerESim extends Thread {
 				} // end if
 				serverReceive();
 				clientSend();
-				if (lastPacketWrite == true)
+				if (errorReceived || lastPacketWrite)
 					return true;	// Last packet is now sent. The thread will close			
 				firstPacket = false;
 				return false;
@@ -652,7 +653,7 @@ public class ConnectionManagerESim extends Thread {
 					clientReceive();
 				firstPacket = false;
 				serverSend();
-				if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])	
+				if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))	
 					return true;	// Last packet is now sent. The thread will close
 
 				serverReceive();
@@ -685,7 +686,7 @@ public class ConnectionManagerESim extends Thread {
 					}//end if
 					clientReceive(); // fetches next ack (ack 02)
 					serverSend();
-					if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]){
+					if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])){
 						return true;
 					}// end if
 					else {
@@ -703,7 +704,7 @@ public class ConnectionManagerESim extends Thread {
 						}//end if
 						clientReceive();
 						serverSend();
-						if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]){
+						if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])){
 							return true;
 						}
 						return false;
@@ -743,7 +744,7 @@ public class ConnectionManagerESim extends Thread {
 						mode = 0;
 						serverSend();
 						// this will exit out if we are duplicating the last ACK packet
-						if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])
+						if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))
 							return true;
 						serverReceive();
 						clientSend();
@@ -760,14 +761,14 @@ public class ConnectionManagerESim extends Thread {
 						}//end if
 						clientReceive();
 						serverSend();
-						if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])	
+						if (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))	
 							return true;	// Last packet is now sent. The thread will close
 						firstPacket = false;
 					}
 				} // end if
 
 				serverSend();
-				if (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])	
+				if (errorReceived || (errorReceived || (lastPacketRead == true && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])))	
 					return true;	// Last packet is now sent. The thread will close
 				serverReceive();
 				clientSend();
@@ -815,7 +816,7 @@ public class ConnectionManagerESim extends Thread {
 					} // end if
 					serverReceive();
 					clientSend();
-					if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]){	
+					if (errorReceived || (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])){	
 						return true;	// Last packet is now sent. The thread will close
 					}// end if
 					else {
@@ -833,12 +834,12 @@ public class ConnectionManagerESim extends Thread {
 						} // end if
 						serverReceive();
 						clientSend();
-						if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]){	
+						if (errorReceived || (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])){	
 							return true;	// Last packet is now sent. The thread will close
 						}// end if
 						serverReceive();
 						clientSend();
-						if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]){	
+						if (errorReceived || (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])){	
 							return true;	// Last packet is now sent. The thread will close
 						}// end if
 						return false;
@@ -861,7 +862,7 @@ public class ConnectionManagerESim extends Thread {
 				serverReceive();
 
 				clientSend();
-				if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])	
+				if (errorReceived || (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]))	
 					return true;	// Last packet is now sent. The thread will close
 				firstPacket = false;
 				return false;
@@ -902,7 +903,7 @@ public class ConnectionManagerESim extends Thread {
 					mode = 0;
 				}
 				clientSend();
-				if (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])	
+				if (errorReceived || (lastPacketWrite == true && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]))	
 					return true;	// Last packet is now sent. The thread will close
 				firstPacket = false;
 				return false;
@@ -916,9 +917,9 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 27 2014
 	 * 
-	 * Latest Change: 
-	 * @version May 27 2014
-	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
+	 * Latest Change: Added 
+	 * @version May 31 2014
+	 * @author Kais
 	 */	
 	private void clientReceive() {
 		if (verbose)
@@ -931,7 +932,8 @@ public class ConnectionManagerESim extends Thread {
 		catch (IOException ie) {
 			System.err.println("IOException error: " + ie.getMessage());
 		}//end catch
-
+		if (receiveClientPacket.getData()[1] == (byte)5)
+			errorReceived = true;
 		System.out.println("ConnectionManagerESim: Received packet from client");
 		printInformation(receiveClientPacket);
 		// updating the data and length in the packet being sent to the server
@@ -1004,7 +1006,8 @@ public class ConnectionManagerESim extends Thread {
 
 		if(verbose) // print out information about the packet received from the server if verbose
 			printInformation(receiveServerPacket);
-
+		if (receiveServerPacket.getData()[1] == (byte)5)
+			errorReceived = true;
 		serverData = receiveServerPacket.getData();
 		serverLength = receiveServerPacket.getLength();
 		// set the serverPort to the port we have just received it from (meaning to the Server Thread that will deal with this request
