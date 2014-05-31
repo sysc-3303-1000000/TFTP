@@ -92,7 +92,7 @@ public class Client extends Thread {
 
 		// send the packet to well-known port 68
 		try {
-			sendPacket = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), 2068);
+			sendPacket = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), 68);
 		} // end try
 		catch (UnknownHostException uhe) {
 			System.err.println("Unknown host exception error: " + uhe.getMessage());
