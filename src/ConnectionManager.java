@@ -120,7 +120,7 @@ public class ConnectionManager extends Thread {
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
-					if (receivedPacket.getData()[1] == (byte)5) {
+					if (worked && receivedPacket.getData()[1] == (byte)5) {
 						printErrorMessage(receivedPacket.getData());
 						return;
 					} // end if
