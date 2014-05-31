@@ -276,6 +276,7 @@ public class Client extends Thread {
 						byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again. Also ensure you have read permissions for the file and directory").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+							System.out.println("Client sending error packet 1");
 						} // end try 
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
