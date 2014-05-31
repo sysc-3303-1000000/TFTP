@@ -8,7 +8,7 @@ import java.util.*;
  * @since May 11 2014
  * 
  * @author 1000000
- * @version May 21 2014
+ * @version May 31 2014
  *
  */
 public class Client extends Thread {
@@ -80,8 +80,8 @@ public class Client extends Thread {
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Added functionality to send error packets 1 2 and 3, and to handle receiving error packets
-	 * @version May 30 2014
+	 * Latest Change: Fixed how disk full error packet was being handled 
+	 * @version May 31 2014
 	 * @author Kais
 	 * 
 	 */
@@ -116,7 +116,6 @@ public class Client extends Thread {
 		receivePacket = new DatagramPacket(rply, rply.length);
 
 		// block until you receive a packet
-		// TODO ADD A TIME OUT ON IT
 		boolean worked = false;
 		int numberOfTimeouts = 0;
 		while (!worked) {
@@ -166,6 +165,7 @@ public class Client extends Thread {
 						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one.").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(two, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+							System.out.println("Client sent error packet 2");
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -175,10 +175,11 @@ public class Client extends Thread {
 						} // end catch
 						return;
 					} // end catch
-					catch (SyncFailedException sfe) { // respond with error packet 0503_0 at this point, then terminate client thread
+					catch (IOException e) { // respond with error packet 0503_0 at this point, then terminate client thread
 						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again.").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg((byte)3, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+							System.out.println("Client sent error packet 3");
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -187,10 +188,6 @@ public class Client extends Thread {
 							System.err.println("IO Exception: " + e1.toString());
 						} // end catch
 						return;
-					} // end catch
-					catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
 					} // end catch
 				}
 				else {
@@ -275,7 +272,7 @@ public class Client extends Thread {
 						fileData = ReadFromFile(blockNum);
 					} // end try
 					catch (FileNotFoundException e) { // respond with error packet 0501_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again.").getBytes();
+						byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again. Also ensure you have read permissions for the file and directory").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
 						} // end try 
@@ -424,12 +421,12 @@ public class Client extends Thread {
 	 * 
 	 * @since May 17 2014
 	 * 
-	 * Latest Change: Added implementation of how stuff is written based on Colin's server code
-	 * @version May 17 2014
-	 * @author Colin
+	 * Latest Change: Changed BufferedOutputStream to FileOutputStream in order to catch disk full errors
+	 * @version May 31 2014
+	 * @author Kais
 	 * 
 	 */
-	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException, SyncFailedException
+	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
 		FileOutputStream out = new FileOutputStream(directory + "\\output" + filenameString, (blockNum > 1) ? true : false);
 		System.out.println("write datas length " + writeData.length);
@@ -447,8 +444,8 @@ public class Client extends Thread {
 	 * 
 	 * @since May 17 2014
 	 * 
-	 * Latest Change: Added implementation of how verification is done
-	 * @version May 17 2014
+	 * Latest Change: Added macro for byte 4
+	 * @version May 31 2014
 	 * @author Kais
 	 * 
 	 */
@@ -470,8 +467,8 @@ public class Client extends Thread {
 	 * 
 	 * @since May 17 2014
 	 * 
-	 * Latest Change: Added implementation of how verification is done
-	 * @version May 17 2014
+	 * Latest Change: Added macro for byte 3
+	 * @version May 31 2014
 	 * @author Kais
 	 * 
 	 */
@@ -510,6 +507,7 @@ public class Client extends Thread {
 		System.out.println("\n\n");
 
 	} // end method
+	
 	/**
 	 * Following method will print the error message from an error packet
 	 * @param errorMsg the byte array containing the entirety of the message from the error packet
@@ -522,7 +520,8 @@ public class Client extends Thread {
 	 */
 	private void printErrorMsg(byte[] errorMsg) {
 		byte msg[] = new byte[errorMsg.length - 5];
-
+		
+		/* Retrieve the error message from the entirety of the data from the error packet */
 		for (int i = 0; i < msg.length; i++) {
 			msg[i] = errorMsg[i+4];
 		} // end forloop
@@ -538,8 +537,8 @@ public class Client extends Thread {
 	 * 
 	 * @since May 30 2014
 	 * 
-	 * Latest Change: Added implementation for the function
-	 * @version May 30 2014
+	 * Latest Change: Added macro for byte 5
+	 * @version May 31 2014
 	 * @author Kais
 	 */
 	private byte[] createErrorMsg(byte type, byte errorMsg[]) {
@@ -547,9 +546,10 @@ public class Client extends Thread {
 
 		/* Form the Error packet header */
 		msg[0] = zero;
-		msg[1] = (byte)5;
+		msg[1] = five;
 		msg[2] = zero;
 		msg[3] = type;
+		
 		/* Insert the error message */
 		for(int i = 0; i < errorMsg.length; i++)
 			msg[i+4] = errorMsg[i];
@@ -588,7 +588,7 @@ public class Client extends Thread {
 
 		// add the file bytes starting at index 2
 		for (int i = 0; i<file.length; i++) {
-			msg[i+2] = file[i];
+			msg[msgIndex] = file[byteCount];
 			byteCount++;
 			msgIndex++;
 		} // end forloop
@@ -611,7 +611,7 @@ public class Client extends Thread {
 		msg[msgIndex] = zero;
 
 		return msg;
-	} // end forloop
+	} // end method
 
 	public void run() {
 		sendReceive(req);

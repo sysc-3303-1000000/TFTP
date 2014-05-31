@@ -1,14 +1,11 @@
 import java.io.*;
-import java.net.*;
-import java.util.*;
-
 /**
  * The following is implementation for the Client User Interface
  * 
  * @since May 21 2014
  * 
  * @author 1000000
- * @version May 21 2014
+ * @version May 31 2014
  *
  */
 public class ClientUI {
@@ -17,26 +14,28 @@ public class ClientUI {
 	 * Main method for the Client User Interface
 	 * @param args not used
 	 * @throws IOException if file or folder not present
-	 * @throws NumberFormatException if numbers not entered where supposed to be numbers
 	 * 
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: Added User Interface
-	 * @version May 21 2014
+	 * Latest Change: Now catch numberformatexceptions and act accordingly
+	 * @version May 31 2014
 	 * @author Kais
 	 * 
 	 */
-	public static void main(String[] args) throws NumberFormatException, IOException {
+	public static void main(String[] args) throws IOException {
 		BufferedReader br = new BufferedReader( new InputStreamReader(System.in));
 		int exit = 0;
 		String directory = null;
 		String filename = null;
-		int rw;
+		int rw = 0;
 		
 		do {
 			do {
-				System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
-				rw = Integer.parseInt(br.readLine());
+				try {
+					System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
+					rw = Integer.parseInt(br.readLine());
+				} // end try
+				catch (NumberFormatException nfe) {} // end catch
 			} while (rw != 1 && rw != 2); // end dowhile
 		
 			if (rw == 1) {
@@ -46,7 +45,7 @@ public class ClientUI {
 				directory = br.readLine();
 				Thread client = new Client(filename, directory, Request.READ);
 				client.start();
-				while (client.getState() != Thread.State.TERMINATED) {}
+				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
 			else if (rw == 2) {
 				System.out.println("What is the name of the file you wish to write to the server? (i.e. 'Test.txt')");
@@ -55,11 +54,15 @@ public class ClientUI {
 				directory = br.readLine();
 				Thread client = new Client(filename, directory, Request.WRITE);
 				client.start();
-				while (client.getState() != Thread.State.TERMINATED) {}
+				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
-			System.out.println("Would you like to invoke another read or write? (0 - Yes, anything else - No)");
-			exit = Integer.parseInt(br.readLine());
+			try {
+				System.out.println("Would you like to invoke another read or write? (0 - Yes, anything else - No)");
+				exit = Integer.parseInt(br.readLine());
+			} // end try
+			catch (NumberFormatException nfe) { exit = 1;} // end catch
 		} while (exit == 0); // end dowhile
+		System.out.println("You have ended the TFTP session");
 	} // end method
 
 } // end class
