@@ -12,6 +12,7 @@ import java.util.*;
  *
  */
 public class Client extends Thread {
+	public static final int DATA_SIZE = 516;
 	public static final byte zero = (byte)0;
 	public static final byte one = (byte)1;
 	public static final byte two = (byte)2;
@@ -327,7 +328,7 @@ public class Client extends Thread {
 					catch (IOException ioe) {
 						System.err.println("Unknown IO exception error: " + ioe.getMessage());
 					} // end catch
-					byte reply[] = new byte[4];
+					byte reply[] = new byte[DATA_SIZE];
 					receivePacket = new DatagramPacket(reply, reply.length);
 
 					try {
@@ -344,10 +345,14 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
-					if (receivePacket.getData()[1] == five) {
+					if (worked && receivePacket.getData()[1] == five) {
 						printErrorMsg(receivePacket.getData());
 						return;
 					} // end if
+					else if(worked){
+						receivePacket.setData(Arrays.copyOfRange(reply, 0, 4));
+					}
+					
 					if (numberOfTimeouts == 5) {
 						System.out.println("Client has timed out 5 times waiting for the next ack packet from server");
 						return;

@@ -120,6 +120,10 @@ public class ConnectionManager extends Thread {
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
+					if (receivedPacket.getData()[1] == (byte)5) {
+						printErrorMessage(receivedPacket.getData());
+						return;
+					} // end if
 				}
 				blockNum = 0;
 				blockNum += (data[2]) * 256;
@@ -131,9 +135,44 @@ public class ConnectionManager extends Thread {
 					try {
 						WriteToFile(blockNum, Arrays.copyOfRange(data, 4, receivedPacket.getLength())); // write the data
 					} catch (FileNotFoundException e) {
-						System.out.println("File Not Found: " + e.toString());
-						System.exit(0);
-					} catch (IOException e) {
+						byte emsg[] = ("The file: " + fileName + " could not be written to the Server directory. Please ensure the server has write permission to the Server directory.").getBytes();
+						try {
+							send.send(new DatagramPacket(createErrorMessage((byte)2, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
+						} // end catch
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						return;
+					} catch (SyncFailedException sfe) { // respond with error packet 0503_0 at this point, then terminate client thread
+						byte emsg[] = ("The file: " + fileName + " could not be written in the Server directory. Please ensure the server has write permission to the Server directory.").getBytes();
+						try {
+							send.send(new DatagramPacket(createErrorMessage((byte)3, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
+						} // end catch
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						return;
+					} // end catch
+					catch(FileAlreadyExistsException f){
+						byte emsg[] = ("The file: " + fileName + " already exists on the server, please specify a new file name.").getBytes();
+						try {
+							send.send(new DatagramPacket(createErrorMessage((byte)6, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
+						} // end catch
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						return;
+					}
+					catch (IOException e) {
 						System.out.println("IO Exception: " + e.toString());
 						System.exit(0);
 					}
@@ -143,7 +182,6 @@ public class ConnectionManager extends Thread {
 				writeAck[1] = (byte)4;
 				writeAck[2] = (byte)((blockNum - (blockNum % 256))/256);
 				writeAck[3] = (byte)(blockNum % 256);
-				System.out.println("ack block: " + Integer.toHexString(writeAck[2]) + " " + Integer.toHexString(writeAck[3]));
 				try {// create the acknowledge packet to send back to the client
 					sendData = new DatagramPacket(writeAck, 4, InetAddress.getLocalHost(), receivedPacket.getPort()); // we are going to send this packet to the connectionManagerESim thread
 				} // end try
@@ -207,15 +245,13 @@ public class ConnectionManager extends Thread {
 			//printInformation(sendData);
 
 			while(true){
-				byte data[] = new byte[4];
+				byte data[] = new byte[DATA_SIZE];
 				receivedPacket = new DatagramPacket(data, data.length);
 				numberOfTimeouts = 0;
 				worked = false;
 				while(!worked){
 					if(resend){
 						try { // send response back
-							System.out.print("before send: ");
-							printInformation(sendData);
 							send.send(sendData);
 						} // end try
 						catch (IOException ioe) {
@@ -226,8 +262,6 @@ public class ConnectionManager extends Thread {
 						System.out.println("Server receiving packet from intermediate...");
 						send.setSoTimeout(TIMEOUT);
 						send.receive(receivedPacket);
-						System.out.print("after receive: ");
-						printInformation(receivedPacket);
 						worked = true;
 					} catch(SocketTimeoutException ste){
 						numberOfTimeouts++;
@@ -235,13 +269,20 @@ public class ConnectionManager extends Thread {
 					} catch(IOException ioe) {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 					} // end catch
+					if (worked && receivedPacket.getData()[1] == (byte)5) {
+						printErrorMessage(receivedPacket.getData());
+						return;
+					} // end if
 					if(numberOfTimeouts == 5){
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
 				}
+				
+				receivedPacket.setData(Arrays.copyOfRange(data, 0, 4));
 
 				System.out.println("Received packet from intermediate...");
+				printInformation(receivedPacket);
 
 				blockNum = 0;
 				blockNum += (data[2]) * 256;
@@ -264,8 +305,17 @@ public class ConnectionManager extends Thread {
 					try{
 						fileData = ReadFromFile(blockNum);
 					} catch (FileNotFoundException e) {
-						System.out.println("File Not Found: " + e.toString());
-						System.exit(0);
+						byte emsg[] = ("The file: " + fileName + " could not be located in the Server directory. Please ensure you are specifying the correct file name and try again.").getBytes();
+						try {
+							send.send(new DatagramPacket(createErrorMessage((byte)1, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
+						} // end catch
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						return;
 					} catch (IOException e) {
 						System.out.println("IO Exception: " + e.toString());
 						System.exit(0);
@@ -301,16 +351,21 @@ public class ConnectionManager extends Thread {
 
 	} // end method
 
-	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
+	public void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException, SyncFailedException, FileAlreadyExistsException
 	{
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.dir") + "\\Server\\output" + fileName, (blockNum > 1) ? true : false));
+		if(blockNum == 1){
+			if(new File(System.getProperty("user.dir") + "\\Server\\output" + fileName).isFile())
+				throw new FileAlreadyExistsException();
+		}
+		
+		FileOutputStream out = new FileOutputStream(System.getProperty("user.dir") + "\\Server\\output" + fileName, (blockNum > 1) ? true : false);
 		out.write(writeData, 0, writeData.length);
+		out.getFD().sync();
 		out.close();
 	}
 
 	public byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
-
 		BufferedInputStream in = new BufferedInputStream(new FileInputStream(System.getProperty("user.dir") + "\\Server\\" + fileName));
 
 		byte[] data = new byte[512];
@@ -334,6 +389,25 @@ public class ConnectionManager extends Thread {
 
 		return data;
 
+	}
+	
+	private byte[] createErrorMessage(byte type, byte errorMessage[]){
+		byte msg[] = new byte[errorMessage.length + 5];
+		
+		msg[0] = (byte)0;
+		msg[1] = (byte)5;
+		msg[2] = (byte)0;
+		msg[3] = type;
+		
+		System.arraycopy(errorMessage, 0, msg, 4, errorMessage.length - 2);
+		
+		msg[errorMessage.length - 1] = (byte)0;
+		
+		return msg;
+	}
+	
+	private void printErrorMessage(byte[] errorMessage){
+		System.out.println("Server has received error packet from client: " + new String(Arrays.copyOfRange(errorMessage, 4, errorMessage.length - 4)));
 	}
 
 	private void printInformation(DatagramPacket p) {

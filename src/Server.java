@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.lang.Object.*;
 
 /**
  * The following is implementation for the Server
@@ -10,14 +11,15 @@ import java.net.*;
  * @version May 17 2014
  *
  */
-public class Server {
+public class Server extends Thread {
 	public static final int DATA_SIZE = 516;
-	
+
 	private DatagramSocket receive;
 	private DatagramPacket receivedata;
 	private byte data[];
 	private boolean verbose;
 	private static String fileName;
+	private volatile boolean interrupted = false;
 	/**
 	 * The following is the constructor for Server
 	 * 
@@ -32,17 +34,17 @@ public class Server {
 		data = new byte[DATA_SIZE];
 		this.verbose = verbose;
 		this.fileName = "";
-		
+
 		try { // initialize the socket to a well known port
 			receive = new DatagramSocket(69);
 		} // end try
 		catch (SocketException se) {
 			System.err.println("Socket exception error: " + se.getMessage());
 		} // end catch
-		
+
 		receivedata = new DatagramPacket(data, data.length);
 	} // end constructor
-	
+
 	/**
 	 * The following is used to print information about the Packet.
 	 * @param p DatagramPacket which will have its information printed
@@ -67,7 +69,7 @@ public class Server {
 		} // end forloop
 		System.out.println("\n\n");
 	} // end method
-	
+
 	/**
 	 * The following is used to verify the Packet.
 	 * @param p DatagramPacket which will be verified
@@ -83,73 +85,70 @@ public class Server {
 		Request r = null;
 		if(p.getData()[0] != (byte)0)
 			System.exit(1); // TODO properly handle error
-		
-		/*
-		if(p.getData()[1] == (byte)3) {
-			r = Request.DATA;
-			System.out.println("Is continued Write");
-		}
-		else if(p.getData()[1] == (byte)4) {
-			r = Request.ACK;
-			System.out.println("Is continued Read");
-		}*/
+
 		else if(p.getData()[1] == (byte)5) {
 			System.exit(1);
 			return;
 		}
 		else if(p.getData()[1] == (byte)1)
-				r = Request.READ;
+			r = Request.READ;
 		else if(p.getData()[1] == (byte)2)
-				r = Request.WRITE;
+			r = Request.WRITE;
 		else
 			return;
 		if(r == null)
 			return;
-			
-			int innerzero = 0;
-			boolean found = false;
-			System.out.println(p.getLength());
-			for (int i = 2; i < p.getLength() - 1; i++) {
-				if (data[i] == (byte) 0) {
-					if (!found) {
-						innerzero = i;
-						found = true;
-					} // end if
-				}
+
+		int innerzero = 0;
+		boolean found = false;
+		System.out.println(p.getLength());
+		for (int i = 2; i < p.getLength() - 1; i++) {
+			if (data[i] == (byte) 0) {
+				if (!found) {
+					innerzero = i;
+					found = true;
+				} // end if
 			}
-			byte[] fileNameByteArray = new byte[innerzero-2];
-			System.arraycopy(data, 2, fileNameByteArray, 0, innerzero-2);
-			fileName = new String(fileNameByteArray);
-			
-			
+		}
+		byte[] fileNameByteArray = new byte[innerzero-2];
+		System.arraycopy(data, 2, fileNameByteArray, 0, innerzero-2);
+		fileName = new String(fileNameByteArray);
+
+
 		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength(), fileName);
 		newConnectionThread.start();
 	} // end method
-	
+
 	/**
 	 * 
 	 */
 	public void sendReceive() {
-		System.out.println("Starting the server infinite loop");
-		receivedata =  new DatagramPacket(data, data.length);
-		for(;;) {
-			
-			try { // wait to receive the packet from client
-				receive.receive(receivedata);
-			} // end try 
-			catch (IOException ie) {
-				System.err.println("IOException error: " + ie.getMessage());
-			} // end catch
-			
-			//data = receivedata.getData(); // extract message
-			System.out.println("Packet received from ErrorSim");
-			System.out.println(receivedata.getLength());
-			if(verbose)
-				printPacketInfo(receivedata);
 
-			verify(receivedata);
-			
-		} // end forloop
+		try { // wait to receive the packet from client
+			receive.receive(receivedata);
+		} // end try 
+		catch (IOException ie) {
+			if(!interrupted)
+				System.err.println("IOException error: " + ie.getMessage());
+			else{
+				System.out.println("Server shutting down");
+				return;
+			}
+		} // end catch
+
+		//data = receivedata.getData(); // extract message
+		System.out.println("Packet received from ErrorSim");
+		System.out.println(receivedata.getLength());
+		if(verbose)
+			printPacketInfo(receivedata);
+
+		verify(receivedata);
+
+	}
+
+	public void interruptThread(){
+		interrupted = true;
+		receive.close();
 	}
 	/**
 	 * Main method for the Server
@@ -162,9 +161,12 @@ public class Server {
 	 * @author Kais
 	 * 
 	 */
-	public static void main(String[] args) {
-		Server server = new Server(true);
-		server.sendReceive();
+	public void run() {
+		System.out.println("Starting the server infinite loop");
+		receivedata =  new DatagramPacket(data, data.length);
+		while(!interrupted)
+			this.sendReceive();
+
 	} // end method
-	
+
 } // end class
