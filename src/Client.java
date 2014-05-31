@@ -15,6 +15,9 @@ public class Client extends Thread {
 	public static final byte zero = (byte)0;
 	public static final byte one = (byte)1;
 	public static final byte two = (byte)2;
+	public static final byte three = (byte)3;
+	public static final byte four = (byte)4;
+	public static final byte five = (byte)5;
 	public static final int TIMEOUT = 3000;
 
 	private DatagramSocket sendReceiveSocket; // Socket used to send and receive packets
@@ -130,14 +133,17 @@ public class Client extends Thread {
 			catch (IOException ioe) {
 				System.err.println("IO Exception error: " + ioe.getMessage());
 				worked = false;
-				
+
 			} // end catch
 			if (numberOfTimeouts == 5) {
 				System.out.println("Client has timed out 5 times waiting for the first packet back from server");
 				return;
 			} // end if
 		} // end whileloop
-
+		if (receivePacket.getData()[1] == five) {
+			printErrorMsg(receivePacket.getData());
+			return;
+		} // end if
 		// prints out the information on the received packet
 		printInformation(receivePacket);
 		System.out.println("Client packet received..");
@@ -152,46 +158,50 @@ public class Client extends Thread {
 			blockNum = 1;
 			ackNum = 1;
 			while(true) { 
-					if (verifydata(dataNumber, receivePacket)) {
+				if (verifydata(dataNumber, receivePacket)) {
+					try {
+						WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));// make sure if we receive a duplicate data packet, we only write the first one
+					} // end try
+					catch (FileNotFoundException e) { // respond with error packet 0502_0 at this point, then terminate client thread
+						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one.").getBytes();
 						try {
-							WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));// make sure if we receive a duplicate data packet, we only write the first one
-						}
-						catch (FileNotFoundException e) { // respond with error packet 0502_0 at this point, then terminate client thread
-							byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one.").getBytes();
-							try {
-								sendReceiveSocket.send(new DatagramPacket(createErrorMsg(two, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							} catch (UnknownHostException e1) {
-								System.err.println("Unknown Host: " + e1.toString());
-							} catch (IOException e1) {
-								System.err.println("IO Exception: " + e1.toString());
-							}
-							return;
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(two, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
 						} // end catch
-						catch (SyncFailedException sfe) { // respond with error packet 0503_0 at this point, then terminate client thread
-							byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again.").getBytes();
-							try {
-								sendReceiveSocket.send(new DatagramPacket(createErrorMsg((byte)3, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							} catch (UnknownHostException e1) {
-								System.err.println("Unknown Host: " + e1.toString());
-							} catch (IOException e1) {
-								System.err.println("IO Exception: " + e1.toString());
-							}
-							return;
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
 						} // end catch
-						catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+						return;
+					} // end catch
+					catch (SyncFailedException sfe) { // respond with error packet 0503_0 at this point, then terminate client thread
+						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again.").getBytes();
+						try {
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg((byte)3, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
 						} // end catch
-					}
-					else {
-						dataNumber[1]--;
-						if(dataNumber[1] == 255) {
-							dataNumber[0]--;
-						} // end if
-						ackNum--;
-						blockNum--;
-					} // end else
-				
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						return;
+					} // end catch
+					catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} // end catch
+				}
+				else {
+					dataNumber[1]--;
+					if(dataNumber[1] == 255) {
+						dataNumber[0]--;
+					} // end if
+					ackNum--;
+					blockNum--;
+				} // end else
+
 				ack[0] = (byte)0;
 				ack[1] = (byte)4;
 				ack[2] = (byte)((ackNum - (ackNum % 256))/256);
@@ -204,20 +214,20 @@ public class Client extends Thread {
 				} // end catch
 				worked = false;
 				numberOfTimeouts = 0;
-					try {
-						sendReceiveSocket.send(sendData);
-					} // end try
-					catch (IOException ioe) {
-						System.err.println("Unknown IO exception error: " + ioe.getMessage());
-					} // end catch
-					System.out.println("Sent ack packet");
-					printInformation(sendData);
-					if (receivePacket.getLength() < 516) {
-						break;
-					} // end if
+				try {
+					sendReceiveSocket.send(sendData);
+				} // end try
+				catch (IOException ioe) {
+					System.err.println("Unknown IO exception error: " + ioe.getMessage());
+				} // end catch
+				System.out.println("Sent ack packet");
+				printInformation(sendData);
+				if (receivePacket.getLength() < 516) {
+					break;
+				} // end if
 
-					byte rly[] = new byte[516];
-					receivePacket = new DatagramPacket(rly, rly.length);
+				byte rly[] = new byte[516];
+				receivePacket = new DatagramPacket(rly, rly.length);
 				while(!worked) {
 					try {
 						worked = true;
@@ -234,17 +244,21 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
+					if (receivePacket.getData()[1] == five) {
+						printErrorMsg(receivePacket.getData());
+						return;
+					} // end if
 					if (numberOfTimeouts == 5) {
 						System.out.println("Client has timed out 5 times waiting for the next data packet from server");
 						return;
-					}
+					} // end if
 					if (worked)
 						dat = rly; // new dat will be the data from the packet just received
 				} // end whileloop
 				dataNumber[1]++;
 				if(dataNumber[1] == 0) {
 					dataNumber[0]++;
-				}
+				} // end if
 				ackNum++; // next ack
 				blockNum++; // next block
 			} // end whileloop
@@ -254,98 +268,98 @@ public class Client extends Thread {
 			ackNumber[1] = (byte)0;
 			blockNum = 1;
 			ackNum = 0;
-			while(/*verifyack(ackNumber, receivePacket)*/ true) {
+			while(true) {
 				byte[] fileData = new byte[0];
 				if (verifyack(ackNumber, receivePacket)) {
-				/*	ackNumber[1]--;
-					if(ackNumber[1] == 255) {
-						ackNumber[0]--;
-					}
-					blockNum--;
-				}*/
-				try {
-					fileData = ReadFromFile(blockNum);
-				} // end try
-				catch (FileNotFoundException e) { // respond with error packet 0501_0 at this point, then terminate client thread
-					byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again.").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-					} catch (UnknownHostException e1) {
-						System.err.println("Unknown Host: " + e1.toString());
-					} catch (IOException e1) {
-						System.err.println("IO Exception: " + e1.toString());
-					}
-					return;
-				} // end catch 
-				catch (IOException e) { 
-					System.out.println("IO Exception: " + e.toString());
-					System.exit(0);
-				} // end catch
+						fileData = ReadFromFile(blockNum);
+					} // end try
+					catch (FileNotFoundException e) { // respond with error packet 0501_0 at this point, then terminate client thread
+						byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again.").getBytes();
+						try {
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
+						} // end try 
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
+						} // end catch 
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						return;
+					} // end catch 
+					catch (IOException e) { 
+						System.out.println("IO Exception: " + e.toString());
+						System.exit(0);
+					} // end catch
 
-				byte data[] = new byte[4 + fileData.length];
-				data[0] = (byte)0;
-				data[1] = (byte)3;
-				data[2] = (byte)((blockNum - (blockNum % 256))/256);
-				data[3] = (byte)(blockNum % 256);
+					byte data[] = new byte[4 + fileData.length];
+					data[0] = (byte)0;
+					data[1] = (byte)3;
+					data[2] = (byte)((blockNum - (blockNum % 256))/256);
+					data[3] = (byte)(blockNum % 256);
 
-				if (fileData.length < 512) {
-					endFile = true;
+					if (fileData.length < 512) {
+						endFile = true;
+					} // end if
+
+					System.arraycopy(fileData, 0, data, 4, fileData.length);
+
+					try {
+						sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), receivePacket.getPort());
+					} // end try
+					catch (UnknownHostException uhe) {
+						System.err.println("Unknown host exception error: " + uhe.getMessage());
+					} // end catch
+					System.out.println("created the following data packet to send off");
 				} // end if
-
-				System.arraycopy(fileData, 0, data, 4, fileData.length);
-
-				try {
-					sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), receivePacket.getPort());
-				} // end try
-				catch (UnknownHostException uhe) {
-					System.err.println("Unknown host exception error: " + uhe.getMessage());
-				} // end catch
-				System.out.println("created the following data packet to send off");
-				}
 				else {
 					ackNumber[1]--;
 					if(ackNumber[1] == 255) {
 						ackNumber[0]--;
 					}
 					blockNum--;
-				}
+				} // end else
 				worked = false;
 				numberOfTimeouts = 0;
-				
-				while(!worked) {
-				printInformation(sendData);
-				try {
-					sendReceiveSocket.send(sendData);
-				} // end try
-				catch (IOException ioe) {
-					System.err.println("Unknown IO exception error: " + ioe.getMessage());
-				} // end catch
-				byte reply[] = new byte[4];
-				receivePacket = new DatagramPacket(reply, reply.length);
 
-				try {
-					worked = true;
-					System.out.println("Client receiving packet from intermediate...");
-					sendReceiveSocket.setSoTimeout(TIMEOUT);
-					sendReceiveSocket.receive(receivePacket);
-				} // end try
-				catch (SocketTimeoutException ste) {
-					numberOfTimeouts++;
-					worked = false;
-				} // end catch
-				catch (IOException ioe) {
-					System.err.println("IO Exception error: " + ioe.getMessage());
-					worked = false;
-				} // end catch
-				if (numberOfTimeouts == 5) {
-					System.out.println("Client has timed out 5 times waiting for the next ack packet from server");
-					return;
-				}
-				if (endFile && worked) // breaks if endfile and the it received a response
-					break;
+				while(!worked) {
+					printInformation(sendData);
+					try {
+						sendReceiveSocket.send(sendData);
+					} // end try
+					catch (IOException ioe) {
+						System.err.println("Unknown IO exception error: " + ioe.getMessage());
+					} // end catch
+					byte reply[] = new byte[4];
+					receivePacket = new DatagramPacket(reply, reply.length);
+
+					try {
+						worked = true;
+						System.out.println("Client receiving packet from intermediate...");
+						sendReceiveSocket.setSoTimeout(TIMEOUT);
+						sendReceiveSocket.receive(receivePacket);
+					} // end try
+					catch (SocketTimeoutException ste) {
+						numberOfTimeouts++;
+						worked = false;
+					} // end catch
+					catch (IOException ioe) {
+						System.err.println("IO Exception error: " + ioe.getMessage());
+						worked = false;
+					} // end catch
+					if (receivePacket.getData()[1] == five) {
+						printErrorMsg(receivePacket.getData());
+						return;
+					} // end if
+					if (numberOfTimeouts == 5) {
+						System.out.println("Client has timed out 5 times waiting for the next ack packet from server");
+						return;
+					} // end if
+					if (endFile && worked) { // breaks if endfile and the it received a response
+						printInformation(receivePacket);
+						return;
+					} // end if
 				} // end whileloop
-				if (endFile)
-					break;
 				ackNumber[1]++;
 				if(ackNumber[1] == 0) {
 					ackNumber[0]++;
@@ -440,7 +454,7 @@ public class Client extends Thread {
 	 */
 	private boolean verifyack(byte[] ackNumber, DatagramPacket p) {
 		byte ack[] = p.getData();
-		if (ack[0] == (byte)0 && ack[1] == (byte)4) {
+		if (ack[0] == zero && ack[1] == four) {
 			if (ack[2] == ackNumber[0] && ack[3] == ackNumber[1]) {
 				return true;
 			} // end if
@@ -463,7 +477,7 @@ public class Client extends Thread {
 	 */
 	private boolean verifydata(byte[] dataNumber, DatagramPacket p) {
 		byte data[] = p.getData();
-		if (data[0] == (byte)0 && data[1] == (byte)3) {
+		if (data[0] == zero && data[1] == three) {
 			if (data[2] == dataNumber[0] && data[3] == dataNumber[1]) {
 				return true;
 			} // end if
@@ -496,7 +510,26 @@ public class Client extends Thread {
 		System.out.println("\n\n");
 
 	} // end method
-	
+	/**
+	 * Following method will print the error message from an error packet
+	 * @param errorMsg the byte array containing the entirety of the message from the error packet
+	 * 
+	 * @since May 30 2014
+	 * 
+	 * Latest Change: Added implementation for this method
+	 * @version May 30 2014
+	 * @author Kais
+	 */
+	private void printErrorMsg(byte[] errorMsg) {
+		byte msg[] = new byte[errorMsg.length - 5];
+
+		for (int i = 0; i < msg.length; i++) {
+			msg[i] = errorMsg[i+4];
+		} // end forloop
+
+		System.out.println("Client has received error packet from server: " + new String(msg));
+	} // end method
+
 	/**
 	 * Following method will create an error message which will be put into a packet and sent to the server
 	 * @param type the type of error we have encountered on the client side
@@ -511,7 +544,7 @@ public class Client extends Thread {
 	 */
 	private byte[] createErrorMsg(byte type, byte errorMsg[]) {
 		byte msg[] = new byte[5 + errorMsg.length];
-		
+
 		/* Form the Error packet header */
 		msg[0] = zero;
 		msg[1] = (byte)5;
@@ -520,10 +553,10 @@ public class Client extends Thread {
 		/* Insert the error message */
 		for(int i = 0; i < errorMsg.length; i++)
 			msg[i+4] = errorMsg[i];
-		
+
 		/* Add the footer */
 		msg[msg.length -1] = zero;
-		
+
 		return msg;
 	}
 
@@ -582,5 +615,6 @@ public class Client extends Thread {
 
 	public void run() {
 		sendReceive(req);
+		sendReceiveSocket.close();
 	}
 } // end class
