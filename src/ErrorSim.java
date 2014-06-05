@@ -263,17 +263,22 @@ public class ErrorSim {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid TID");
-			System.out.println("Please enter the type of packet you would like to corrupt:\n1 - RRQ\n2 - WRQ\n3 - DATA\n4 - ACK");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n3 - DATA\n4 - ACK");
 			packetType = input.nextInt();
 			
 			// check if it is a DATA or ACK that we are changing, grab which packet number
 			if (packetType == 3 || packetType == 4){
 				System.out.println("Which packet do you want to corrupt: ");
 				packetNumber = input.nextInt();
+				if (packetType == 3 && packetNumber == 1) {
+					System.out.println("There will be an issue if you are doing a READ request!");
+				}// end if
 			}
 			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
 			else {
-				packetNumber = 1;
+				System.out.println("Invalid choice");
+				System.out.println ("ErrorSim: shutting down");
+				System.exit(0);
 			}		
 		}
 		

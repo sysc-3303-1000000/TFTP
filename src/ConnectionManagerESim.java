@@ -18,8 +18,8 @@ public class ConnectionManagerESim extends Thread {
 	public static final long TIMEOUT = 3000;	//int value in miliseconds 
 
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
-	private DatagramSocket serverSocket, clientSocket; // socket deceleration for all three required sockets 
-	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket, corruptPacket; // packet deceleration for all packets being sent and received for both client and server
+	private DatagramSocket serverSocket, clientSocket, corruptSocket; // socket deceleration for all three required sockets 
+	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
 	private boolean verbose;
 	private byte clientData[];
 	private int clientPort;
@@ -1077,13 +1077,205 @@ public class ConnectionManagerESim extends Thread {
 	 * @since June 5 2014
 	 * Latest Change: Added the method
 	 * @version June 4 2014
-	 * @atuthor Mohammed Ahmed-Muhsin & Samson Truong 
-	*/
-	private boolean invalidTID() {
-		
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
+	 */
+	private boolean invalidTID(){
+		// check if this is a read request or a write request
+		if (requestType == Request.READ){ // this is a read request
+			// ************* ACK PACKET ***************
+			if (packetType == 4){ // check to corrupt TID for ACK packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to corrupt TID of ACK packet");
+				if (!lastPacketRead) {
+
+					if (!firstPacket) {
+						// receive from client
+						clientReceive();
+					}// end if
+					firstPacket = false; // this is no longer the first packet
+					// check to see if this is the packet that we want to corrupt
+					if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
+						if (verbose) {
+							System.out.println("ConnectionManagerESim: simulating a corrupt TID client ACK packet");
+							printInformation(receiveClientPacket);
+						}// end if
+						// corrupt the packet being sent to the server
+						corruptPortServer();
+						//we go back to operating as normal
+						mode = 0;
+					}//end if
+
+					else { // this is not the packet we want to corrupt, send to server
+						serverSend();
+						if (lastPacketRead)	
+							return true;	// Last packet is now sent. The thread will close
+					}//end else
+
+					// we need to wait on a server packet
+					serverReceive();
+
+					//send to the client
+					clientSend();
+					//check to see if this is the last packet (DATA < 512b 
+					if(sendClientPacket.getLength() < DATA_SIZE)
+						lastPacketRead = true;
+
+					return false;					
+				} // end if
+				else if (lastPacketRead) {
+					// receive from client
+					clientReceive();
+					// check to see if this is the packet that we want to corrupt
+					if (foundPacket(receiveClientPacket)) { // this is the packet we want to corrupt
+						if (verbose) {
+							System.out.println("ConnectionManagerESim: simulating a corrupt TID client ACK packet");
+							printInformation(receiveClientPacket);
+						}// end if
+						// corrupt the packet being sent to the server
+						corruptPortServer();
+						//we go back to operating as normal
+						mode = 0;
+						return true;
+					}//end if
+					else { // this is not the packet we want to corrupt, send it to server
+						serverSend();
+						return true; //we're done, shut down thread
+					}// end else
+				}//end else if
+			}// end else if
+
+			// ************* DATA PACKET ***************
+			else if (packetType == 3){ // check to lose a DATA packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to corrupt TID for a DATA packet");
+				if (!firstPacket) {
+					// receive from client
+					clientReceive();
+				}// end if
+				firstPacket = false; // this is no longer the first packet
+
+				serverSend();
+				if (lastPacketRead)	
+					return true;	// Last packet is now sent. The thread will close
+				// we need to wait on a server packet
+				serverReceive();
+				// check to see if this is the packet that we want to corrupt
+				if (foundPacket(receiveServerPacket)) { // this is the packet we want to corrupt
+					if (verbose) {
+						System.out.println("ConnectionManagerESim: simulating a corrupt TID server DATA packet");
+						printInformation(receiveServerPacket);
+					}// end if
+					// corrupt the packet being sent to the server
+					corruptPortClient();
+					//we go back to operating as normal
+					mode = 0;
+					return true;
+				}//end if
+
+				//send to the client
+				clientSend();
+				//check to see if this is the last packet (DATA < 512b 
+				if(sendClientPacket.getLength() < DATA_SIZE)
+					lastPacketRead = true;
+
+				return false;	
+			} // end else if
+		}//end if
+		else if (requestType == Request.WRITE){ // this is a write request
+			// ************* ACK PACKET ***************
+			if (packetType == 4){ // check to lose a ACK packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to lose ACK packet");
+				if (firstPacket) { // if this is the first packet
+					serverSend();
+					serverReceive();
+					firstPacket = false; // this is no longer the first packet
+					clientSend();
+					return false;
+				}// end if		
+				clientReceive();
+				// check to see if packet is < 512 bytes
+				if (receiveClientPacket.getLength() < DATA_SIZE) {
+					lastPacketWrite = true;
+				}
+
+				serverSend();
+
+				// we need to wait on a server packet
+				serverReceive();
+				// check to see if this is the packet that we want to corrupt
+				if (foundPacket(receiveServerPacket)) { // this is the packet we want to corrupt
+					if (verbose) {
+						System.out.println("ConnectionManagerESim: simulating a corrupt TID server ACK packet");
+						printInformation(receiveServerPacket);
+					}// end if
+					// corrupt the packet being sent to the server
+					corruptPortClient();
+					//we go back to operating as normal
+					mode = 0;
+
+					// check to see if this is the last packet
+					if (lastPacketWrite) { // this is the last ACK packet that we are sending back to the client
+						return true;
+					}
+					else {
+						//we go back to operating as normal
+						mode = 0;
+						return false;
+					}
+				}//end if
+
+				//send to the client
+				clientSend();
+				// we just sent the last ACK packet to the client, we are done.
+				if (lastPacketWrite)
+					return true;
+				else
+					return false;
+			}// end else if
+
+			// ************* DATA PACKET ***************
+			else if (packetType == 3){ // check to corrupt a DATA packet
+				if (verbose)
+					System.out.println("ConnectionManagerESim: checking to lose a DATA packet");
+
+				if (!firstPacket) {
+					// receive from client
+					clientReceive();
+				}// end if
+				firstPacket = false; // this is no longer the first packet
+
+				// check to see if this is the packet that we want to corrupt
+				if (foundPacket(receiveClientPacket)) { // this is the packet we want to corrupt
+					if (verbose) {
+						System.out.println("ConnectionManagerESim: simulating a corrupt TID client DATA packet");
+						printInformation(receiveClientPacket);
+					}// end if
+					// corrupt the packet being sent to the server
+					corruptPortServer();
+					//we go back to operating as normal
+					mode = 0;
+				}//end if
+				else {
+					// send to the server
+					serverSend();
+				} // end else
+				if (sendServerPacket.getLength() < DATA_SIZE)
+					lastPacketWrite = true;
+
+				// we need to wait on a server packet
+				serverReceive(); 
+
+				//send to the client
+				clientSend();
+				if (lastPacketWrite)
+					return true;	// Last packet is now sent. The thread will close
+				return false;					
+			} // end else if
+		}//end if
 		return false;
-	}
-	 
+	}// end method
+	
 	/**
 	 * The following will be the method to RECEIVE CLIENT PACKETS
 	 * 
@@ -1325,5 +1517,139 @@ public class ConnectionManagerESim extends Thread {
 					return 516;	//this will add an extra byte to the end of the data, (if data is not 512, then this will have no affect)
 			}				
 		return 0;
+	}
+
+	/** 
+	 * The following method will create a corrupt TID to send to the server
+	 * @since June 5 2014
+	 * Latest Change: Added the method
+	 * @version June 4 2014
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
+	 */
+	private void corruptPortServer() {
+		// initialize the DatagramSocket corruptSocket
+		try {
+			corruptSocket = new DatagramSocket();
+		} // end try 
+		catch (SocketException se) {
+			System.err.println("SocketException: " + se.getMessage());
+		} // end catch
+
+		if (verbose)
+			System.out.println("ConnectionManageESim: Preparing corrupt packet to send to Server");
+		// prepare the new send packet to the server
+		try {
+			sendServerPacket = new DatagramPacket(clientData, clientLength, InetAddress.getLocalHost(), serverPort);
+		} // end try 
+		catch (UnknownHostException uhe) {
+			System.err.println("Unknown host exception error: " + uhe.getMessage());
+		} // end catch
+
+		// send the packet to the server via the corruptSocket to server port
+		try {
+			corruptSocket.send(sendServerPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		// print confirmation message that the packet has been sent to the server
+		if (verbose)
+			System.out.println("ConnectionManagerESim: Corrupt packet sent to server");
+		if(verbose)
+			printInformation(sendServerPacket);
+
+		// wait to receive the error packet 05 from the server
+		if (verbose)
+			System.out.println("ConnectionManagerESim: Waiting to receive a packet from server...\n");
+
+		receiveServerPacket = new DatagramPacket(serverReply, serverReply.length);
+
+		// block until you receive a packet from the server
+		try {
+			corruptSocket.receive(receiveServerPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		if(verbose) // print out information about the packet received from the server if verbose
+			printInformation(receiveServerPacket);
+		if (receiveServerPacket.getData()[1] == (byte)5 && receiveServerPacket.getData()[2] == (byte)0 && receiveServerPacket.getData()[3] == (byte)5) {
+			if(verbose) 
+				System.out.println("ConnectionManagerESim: server has sent us an error packet with error code 5");
+		}
+		else {
+			if (verbose)
+				System.out.println("ConnectionManagerESim: Server did not process the invalid TID properly!");
+		}
+		corruptSocket.close();
+	}
+
+	/** 
+	 * The following method will create a corrupt TID to send to the client
+	 * @since June 5 2014
+	 * Latest Change: Added the method
+	 * @version June 4 2014
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
+	 */
+	private void corruptPortClient() {
+		// initialize the DatagramSocket corruptSocket
+		try {
+			corruptSocket = new DatagramSocket();
+		} // end try 
+		catch (SocketException se) {
+			System.err.println("SocketException: " + se.getMessage());
+		} // end catch
+
+		if (verbose)
+			System.out.println("ConnectionManageESim: Preparing corrupt packet to send to Client");
+		// prepare the new send packet to the client
+		try {
+			sendClientPacket = new DatagramPacket(serverData, serverLength, InetAddress.getLocalHost(), clientPort);
+		} // end try 
+		catch (UnknownHostException uhe) {
+			System.err.println("Unknown host exception error: " + uhe.getMessage());
+		} // end catch
+
+		// send the packet to the client via the corruptSocket to client port
+		try {
+			corruptSocket.send(sendClientPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		// print confirmation message that the packet has been sent to the client
+		if (verbose)
+			System.out.println("ConnectionManagerESim: Corrupt packet sent to client");
+		if(verbose)
+			printInformation(sendClientPacket);
+
+		// wait to receive the error packet 05 from the client
+		if (verbose)
+			System.out.println("ConnectionManagerESim: Waiting to receive a packet from client...\n");
+
+		receiveClientPacket = new DatagramPacket(clientReply, clientReply.length);
+
+		// block until you receive a packet from the client
+		try {
+			corruptSocket.receive(receiveClientPacket);
+		} // end try 
+		catch (IOException ioe) {
+			System.err.println("Unknown IO exception error: " + ioe.getMessage());
+		} // end catch
+
+		if(verbose) // print out information about the packet received from the client if verbose
+			printInformation(receiveClientPacket);
+		if (receiveClientPacket.getData()[1] == (byte)5 && receiveClientPacket.getData()[2] == (byte)0 && receiveClientPacket.getData()[3] == (byte)5) {
+			if(verbose) 
+				System.out.println("ConnectionManagerESim: client has sent us an error packet with error code 5");
+		}
+		else {
+			if (verbose)
+				System.out.println("ConnectionManagerESim: Client did not process the invalid TID properly!");
+		}
+		corruptSocket.close();
 	}
 } // end class
