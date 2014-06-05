@@ -8,7 +8,7 @@ import java.util.*;
  * @since May 11 2014
  * 
  * @author 1000000
- * @version May 31 2014
+ * @version June 5 2014
  *
  */
 public class Client extends Thread {
@@ -32,25 +32,28 @@ public class Client extends Thread {
 	private boolean endFile = false; // indicates if we have reached the last DATA block
 	private byte message[];
 	private Request req;
+	private int socket;
 
 	/**
 	 * The following is the constructor for the Client
 	 * @param filename the file we are going to read from the server or write to on our side
 	 * @param path the path of the file we are going to write to on our side or the path to place the file we are reading from the server
 	 * @param req whether it is a read or write request
+	 * @param socket set to either the server or error sim socket depending on user input
 	 * 
 	 * @since May 22 2014
 	 * 
-	 * Latest Change: Added implementation
-	 * @version May 22 2014
+	 * Latest Change: Added param socket so we can run in normal mode or error sim mode
+	 * @version June 5 2014
 	 * @author Kais
 	 * 
 	 */
-	public Client(String filename, String path, Request req) {
+	public Client(String filename, String path, Request req, int socket) {
 
 		directory = path;
 		filenameString = filename;
 		this.req = req;
+		this.socket = socket;
 
 		// initialize the DatagramSocket sendReceive to bind to any available port
 		try {
@@ -81,8 +84,8 @@ public class Client extends Thread {
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Fixed how disk full error packet was being handled 
-	 * @version May 31 2014
+	 * Latest Change: Changed port 68 to the socket variable in the first sendPacket initialization to send to error sim or straight to server based on user request
+	 * @version June 5 2014
 	 * @author Kais
 	 * 
 	 */
@@ -92,7 +95,7 @@ public class Client extends Thread {
 
 		// send the packet to well-known port 68
 		try {
-			sendPacket = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), 68);
+			sendPacket = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), socket);
 		} // end try
 		catch (UnknownHostException uhe) {
 			System.err.println("Unknown host exception error: " + uhe.getMessage());

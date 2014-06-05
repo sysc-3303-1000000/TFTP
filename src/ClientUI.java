@@ -5,7 +5,7 @@ import java.io.*;
  * @since May 21 2014
  * 
  * @author 1000000
- * @version May 31 2014
+ * @version June 5 2014
  *
  */
 public class ClientUI {
@@ -17,8 +17,8 @@ public class ClientUI {
 	 * 
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: Now catch numberformatexceptions and act accordingly
-	 * @version May 31 2014
+	 * Latest Change: added prompt for user to select if they would to run in normal mode for the duration of requests or error sim mode
+	 * @version June 5 2014
 	 * @author Kais
 	 * 
 	 */
@@ -28,7 +28,14 @@ public class ClientUI {
 		String directory = null;
 		String filename = null;
 		int rw = 0;
-		
+		int socket = 0;
+		do {
+			try {
+				System.out.println("Would you like to run in normal mode or error simulator mode? (1 - normal, 2 - error simulator)");
+				socket = Integer.parseInt(br.readLine());
+			} // end try
+			catch (NumberFormatException nfe) {} // end catch
+		} while (socket != 1 && socket != 2); // end dowhile
 		do {
 			do {
 				try {
@@ -43,7 +50,7 @@ public class ClientUI {
 				filename = br.readLine();
 				System.out.println("Which directory would you like to save this file into? (i.e. 'C:\\Users\\Kais\\git\\TFTP')");
 				directory = br.readLine();
-				Thread client = new Client(filename, directory, Request.READ);
+				Thread client = new Client(filename, directory, Request.READ, (socket == 1) ? 69 : 68);
 				client.start();
 				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
@@ -52,7 +59,7 @@ public class ClientUI {
 				filename = br.readLine();
 				System.out.println("Which directory is this file located in? (i.e. 'C:\\Users\\Kais\\git\\TFTP')");
 				directory = br.readLine();
-				Thread client = new Client(filename, directory, Request.WRITE);
+				Thread client = new Client(filename, directory, Request.WRITE, (socket == 1) ? 69 : 68);
 				client.start();
 				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
