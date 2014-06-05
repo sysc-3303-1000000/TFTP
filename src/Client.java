@@ -53,7 +53,7 @@ public class Client extends Thread {
 		directory = path;
 		filenameString = filename;
 		this.req = req;
-		this.socket = socket;
+		this.socket = socket; // server or error sim port
 
 		// initialize the DatagramSocket sendReceive to bind to any available port
 		try {
