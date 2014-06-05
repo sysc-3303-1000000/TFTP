@@ -8,8 +8,8 @@ import java.net.*;
  * 
  * @since May 16 2014
  * 
- * @author 1000000
- * @version May 23 2014
+ * @author Mohammed Ahmed-Muhsin & Samson Truong
+ * @version June 6 2014
  *
  */
 public class ConnectionManagerESim extends Thread {
@@ -147,19 +147,9 @@ public class ConnectionManagerESim extends Thread {
 			else if (mode == 4 || mode == 5 || mode == 6 || mode == 7) {
 				end = corruptOp();
 			}
-			/**else if (mode == 5) {
-				end = corruptOp2();
-			}
-			else if (mode == 6) {
-				end = corruptOp3();
-			}
-			else if (mode == 7) {
-				end = corruptOp4();
-			}
 			else if (mode == 8) {
-				end = corruptOp5();		
+				end = invalidTID();		
 			}
-			 **/
 		}//end while
 
 		// begin closing operations
@@ -1080,6 +1070,20 @@ public class ConnectionManagerESim extends Thread {
 		return false;
 	} //end method
 
+	/** 
+	 * The following method will simulate an invalid TID on the packets
+	 * The client and server must ensure that the packet is coming from the expected source
+	 * If not, they must send error code 05 to the other party and continue working 
+	 * @since June 5 2014
+	 * Latest Change: Added the method
+	 * @version June 4 2014
+	 * @atuthor Mohammed Ahmed-Muhsin & Samson Truong 
+	*/
+	private boolean invalidTID() {
+		
+		return false;
+	}
+	 
 	/**
 	 * The following will be the method to RECEIVE CLIENT PACKETS
 	 * 
