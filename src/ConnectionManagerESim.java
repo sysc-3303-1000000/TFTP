@@ -19,7 +19,7 @@ public class ConnectionManagerESim extends Thread {
 
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
 	private DatagramSocket serverSocket, clientSocket; // socket deceleration for all three required sockets 
-	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
+	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket, corruptPacket; // packet deceleration for all packets being sent and received for both client and server
 	private boolean verbose;
 	private byte clientData[];
 	private int clientPort;
@@ -144,6 +144,22 @@ public class ConnectionManagerESim extends Thread {
 			else if (mode == 3) {
 				end = duplicatedOp();
 			}
+			else if (mode == 4 || mode == 5 || mode == 6 || mode == 7) {
+				end = corruptOp();
+			}
+			/**else if (mode == 5) {
+				end = corruptOp2();
+			}
+			else if (mode == 6) {
+				end = corruptOp3();
+			}
+			else if (mode == 7) {
+				end = corruptOp4();
+			}
+			else if (mode == 8) {
+				end = corruptOp5();		
+			}
+			 **/
 		}//end while
 
 		// begin closing operations
@@ -845,7 +861,7 @@ public class ConnectionManagerESim extends Thread {
 						return false;
 					}// end else
 				}// end if
-				
+
 
 				serverSend();
 				if (!firstPacket) {
@@ -911,6 +927,158 @@ public class ConnectionManagerESim extends Thread {
 		}// end else if
 		return false;
 	}// end method
+
+	/**
+	 * The following is the run method for ConnectionManagerESim with a corrupt packet, used to execute code upon starting the thread. 
+	 * User will be able to specify which packet to corrupt and how it is corrupted
+	 * @since June 4 2014
+	 * 
+	 * @version June 4 2014
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong  
+	 * @param x is the position of the corruption
+	 */
+	private boolean corruptOp()
+	{
+		// check to see if the which packet is the one being delayed
+		if (packetType == 1 || packetType == 2) { // RRQ or WRQ packet is being corrupt 
+			if(verbose)
+				System.out.println("ConnectionManagerESim: RRQ/WRQ packet will be corrupted.");
+			int x = corruptPos() ;
+			clientData[x] = (byte)7;	//All read and write request corruption will be turned into an invalid
+			serverSend();
+
+			serverReceive();
+
+			clientSend();
+
+			return true;
+		}// end if
+
+		// now we check if this is a read or write so we can delay on the appropriate packet
+		else if (requestType == Request.READ) { // this is a read request
+			if (packetType == 3) { // DATA packet being corrupt from the server 
+
+				if (!firstPacket)
+					clientReceive();
+
+				serverSend();
+				if (errorReceived || lastPacketRead)	
+					return true;	// Last packet is now sent. The thread will close
+				serverReceive();
+				// check  to see if this is the data packet we want to corrupt
+				if (foundPacket(receiveServerPacket)) {
+					if(verbose) {
+						System.out.println("ConnectionManagerESim: DATA packet will be corrupt.");
+					}
+					int x = corruptPos() ;
+					if(packetNumber == 7)
+						serverData[x] = (byte)8;	//Packet will now have an invalid request
+					else 
+						serverData[x] = (byte)7;	//Packet will now have an invalid request
+				} // end if
+				clientSend();
+				if (!firstPacket) {
+					if(sendClientPacket.getLength() < DATA_SIZE) 
+						lastPacketRead = true;
+				} // end if
+				firstPacket = false;
+				return false;
+			}// end if
+
+			else if (packetType == 4) { // ACK packet being delayed from the client 
+
+				if (!firstPacket) {
+					clientReceive();
+					// check  to see if this is the ACK packet we want to delay
+					if (foundPacket(receiveClientPacket)) {
+						if(verbose)
+							System.out.println("ConnectionManagerESim: ACK packet will be corrupted.");
+						int x = corruptPos() ;
+						if(packetNumber == 7)
+							serverData[x] = (byte)8;	//Packet will now have an invalid request
+						else 
+							serverData[x] = (byte)7;	//Packet will now have an invalid request
+					} // end if
+				}
+				serverSend();
+				if (errorReceived || lastPacketRead)	
+					return true;	// Last packet is now sent. The thread will close
+
+				serverReceive();
+				clientSend();
+				if (errorReceived)	
+					return true;	// Last packet is now sent. The thread will close
+				if (!firstPacket) {
+					if(sendClientPacket.getLength() < DATA_SIZE) 
+						lastPacketRead = true;
+				} // end if	
+				firstPacket = false;
+				return false;
+			}// end if
+		}// end else if
+
+		else if (requestType == Request.WRITE) { // this is a write request
+			if (packetType == 4) { // ACK packet being delayed from the server 
+
+				if (!firstPacket)
+					clientReceive();
+
+				serverSend();
+				if (errorReceived)
+					return true;	// Last packet is now sent. The thread will close
+				if (!firstPacket) {
+					if(sendServerPacket.getLength() < DATA_SIZE)
+						lastPacketWrite = true;	
+				} // end if
+				serverReceive();
+				// check  to see if this is the ACK packet we want to corrupt
+				if (foundPacket(receiveServerPacket)) {
+					if(verbose)
+						System.out.println("ConnectionManagerESim: ACK packet will be corrupted.");
+					int x = corruptPos() ;
+					if(packetNumber == 7)
+						serverData[x] = (byte)8;	//Packet will now have an invalid request
+					else 
+						serverData[x] = (byte)7;	//Packet will now have an invalid request
+				} // end if
+
+				clientSend();
+				if (errorReceived || lastPacketWrite)
+					return true;	// Last packet is now sent. The thread will close
+				firstPacket = false;
+				return false;
+			}// end if
+
+			else if (packetType == 3) { // DATA packet being corrupted from the client 
+
+				if (!firstPacket) {
+					clientReceive();
+					// check  to see if this is the DATA packet we want to corrupt
+					if (foundPacket(receiveClientPacket)) {
+						if(verbose)
+							System.out.println("ConnectionManagerESim: DATA packet will be corrupted.");
+						int x = corruptPos() ;
+						if(packetNumber == 7)
+							serverData[x] = (byte)8;	//Packet will now have an invalid request
+						else 
+							clientData[x] = (byte)7;	//Packet will now have an invalid request
+					} // end if
+				}
+				serverSend();
+				if (!firstPacket) {
+					if(sendServerPacket.getLength() < DATA_SIZE)
+						lastPacketWrite = true;	
+				} // end if
+				serverReceive();
+				clientSend();
+				if (errorReceived || lastPacketWrite)
+					return true;	// Last packet is now sent. The thread will close			
+				firstPacket = false;
+				return false;
+			}// end if
+		}// end else if
+		return false;
+	} //end method
 
 	/**
 	 * The following will be the method to RECEIVE CLIENT PACKETS
@@ -1122,5 +1290,36 @@ public class ConnectionManagerESim extends Thread {
 		return blockNum;
 	} // end method
 
-
+	/**
+	 * This method will give us the block number in which to corrupt
+	 * 
+	 * @return the position of the corruption point
+	 * @since June 4 2014
+	 * 
+	 * @version June 4 2014
+	 * @author Samson Truong 
+	 */	
+	private int corruptPos()
+	{
+		if (mode == 4)	//Invalid Packet Type
+			return 1;	//position of the packet type is 1
+		else if (mode == 5)	//Invalid block number
+			return 3;	//position of the block number is 2 and 3
+		else if (mode == 6)	//Invalid file mode
+			return clientData.length-3;	//position of file mode
+		else if (mode == 7)	//Invalid packet size
+			if (requestType == Request.WRITE) { // this is a write request
+				if (packetType == 4)  // ACK packet being delayed from the server 
+					return 5;	//This will add an extra byte to an ACK
+				else if (packetType == 3)	// DATA
+					return 516;	//this will add an extra byte to the end of the data, (if data is not 512, then this will have no affect)
+			}
+			else if (requestType == Request.READ) {
+				if (packetType == 4)  // ACK packet being delayed from the client
+					return 5;	//This will add an extra byte to an ACK
+				else if (packetType == 3)
+					return 516;	//this will add an extra byte to the end of the data, (if data is not 512, then this will have no affect)
+			}				
+		return 0;
+	}
 } // end class

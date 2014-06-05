@@ -41,6 +41,10 @@ public class ErrorSim {
 	 * 1 Lost packet
 	 * 2 Delayed packet
 	 * 3 Duplicate packet
+	 * 4 Invalid packet type
+	 * 5 Invalid block number
+	 * 6 Invalid file mode
+	 * 7 Invalid TID
 	 * 9 Shutdown Listener
 	 */
 	private static int userChoice;
@@ -176,6 +180,102 @@ public class ErrorSim {
 			System.out.println("Please enter the delay between the duplicated packet (3000 will be 3000 milliseconds): ");
 			delayAmount = input.nextInt();
 		}
+		//Corrupt mode Invalid packet type
+		else if( userChoice == 4) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
+			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid packet type");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n1 - RRQ\n2 - WRQ\n3 - DATA\n4 - ACK");
+			packetType = input.nextInt();
+			
+			// check if it is a DATA or ACK that we are changing, grab which packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to corrupt: ");
+				packetNumber = input.nextInt();
+			}
+			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			else {
+				packetNumber = 1;
+			}		
+		}
+		//Corrupt mode Invalid block number 
+		else if( userChoice == 5) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
+			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid block number");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n3 - DATA\n4 - ACK");
+			packetType = input.nextInt();
+			
+			// check if it is a DATA or ACK that we are changing, grab which packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to corrupt: ");
+				packetNumber = input.nextInt();
+			}
+			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			else {
+				System.out.println("Invalid choice");
+				System.out.println ("ErrorSim: shutting down");
+				System.exit(0);
+			}		
+		}
+		//Corrupt mode Invalid file mode 
+		else if( userChoice == 6) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
+			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid file mode");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n1 - RRQ\n2 - WRQ");
+			packetType = input.nextInt();
+			
+			// we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			if (packetType == 1 || packetType == 2){
+				
+				packetNumber = 1;
+			}
+			// otherwise 
+			else {
+				System.out.println("Invalid choice");
+				System.out.println ("ErrorSim: shutting down");
+				System.exit(0);
+			}		
+		}
+		//Corrupt mode Invalid size 
+		else if( userChoice == 7) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
+			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid size");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n3 - DATA\n4 - ACK");
+			packetType = input.nextInt();
+
+			// check if it is a DATA or ACK that we are changing, grab which packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to corrupt: ");
+				packetNumber = input.nextInt();
+			}
+			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			else {
+				System.out.println("Invalid choice");
+				System.out.println ("ErrorSim: shutting down");
+				System.exit(0);
+			}		
+		}
+		//Corrupt mode Invalid TID 
+		else if( userChoice == 8) {
+			@SuppressWarnings("resource")
+			Scanner input = new Scanner(System.in);
+			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid TID");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n1 - RRQ\n2 - WRQ\n3 - DATA\n4 - ACK");
+			packetType = input.nextInt();
+			
+			// check if it is a DATA or ACK that we are changing, grab which packet number
+			if (packetType == 3 || packetType == 4){
+				System.out.println("Which packet do you want to corrupt: ");
+				packetNumber = input.nextInt();
+			}
+			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
+			else {
+				packetNumber = 1;
+			}		
+		}
 		
 		System.out.println("Error Simulator is waiting for new client request!");
 
@@ -249,12 +349,13 @@ public class ErrorSim {
 			while (!validChoice) {
 				
 				// print out information for the user depending on the mode of run they want to use
-				System.out.println("0 - Normal\n1 - Lose a packet\n2 - Delay a packet\n3 - Duplicate\n9 - Shutdown\n\n");
+				System.out.println("0 - Normal\n1 - Lose a packet\n2 - Delay a packet\n3 - Duplicate\n4 - Invalid packet type\n5 - Invalid block number\n6 - Invalid file mode\n7"
+						+ " - Invalid packet size\n8 - Invalid TID\n9 - Shutdown\n\n");
 				System.out.println("Please enter a mode for the Error Simulator to start in:");
 				
 				userChoice = in.nextInt();
 				// check if a valid choice has been entered
-				if (userChoice == 0 || userChoice == 1 || userChoice == 2 || userChoice == 3 || userChoice == 9) {
+				if (userChoice == 0 || userChoice == 1 || userChoice == 2 || userChoice == 3 ||userChoice == 4 ||userChoice == 5 ||userChoice == 6 ||userChoice == 7 || userChoice == 8 || userChoice == 9) {
 					validChoice = true;
 				}
 				else {
