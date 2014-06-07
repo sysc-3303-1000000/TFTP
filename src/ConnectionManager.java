@@ -13,7 +13,7 @@ import java.util.Arrays;
  *
  */
 public class ConnectionManager extends Thread {
-	public static final int DATA_SIZE = 516;
+	public static final int DATA_SIZE = 517;
 	public static final int TIMEOUT = 3000;
 
 	private DatagramSocket send;
@@ -438,7 +438,7 @@ public class ConnectionManager extends Thread {
 					} // end catch
 					return;
 				}
-				else if (data[0] != (byte)0 || data[1] != (byte)3) {
+				else if (data[0] != (byte)0 || data[1] != (byte)4) {
 					byte emsg[] = ("Server has received an unidentified packet type, Server thread is exiting").getBytes();
 					try {
 						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));

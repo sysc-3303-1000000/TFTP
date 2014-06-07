@@ -12,7 +12,7 @@ import java.util.*;
  *
  */
 public class Client extends Thread {
-	public static final int DATA_SIZE = 516;
+	public static final int DATA_SIZE = 517;
 	public static final byte zero = (byte)0;
 	public static final byte one = (byte)1;
 	public static final byte two = (byte)2;
@@ -117,7 +117,7 @@ public class Client extends Thread {
 
 
 		// prepare to receive a packet
-		byte rply[] = new byte[516];
+		byte rply[] = new byte[DATA_SIZE];
 		receivePacket = new DatagramPacket(rply, rply.length);
 
 		// block until you receive a packet
@@ -283,7 +283,7 @@ public class Client extends Thread {
 				if (receivePacket.getLength() < 516) {
 					break;
 				} // end if
-				byte rly[] = new byte[516];
+				byte rly[] = new byte[DATA_SIZE];
 				receivePacket = new DatagramPacket(rly, rly.length);
 				while(!worked) {
 					try {
