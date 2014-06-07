@@ -190,7 +190,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				}
-				if ((receivePacket.getData()[2] != dataNumber[0] && receivePacket.getData()[2] != dataNumber[0] + one) || (receivePacket.getData()[3] != dataNumber[1] && receivePacket.getData()[3] != dataNumber[1] + one)) {
+				if ((receivePacket.getData()[2] != dataNumber[0] && receivePacket.getData()[2] != dataNumber[0] - one) || (receivePacket.getData()[3] != dataNumber[1] && receivePacket.getData()[3] != dataNumber[1] - one)) {
 					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process, client thread is exiting").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
@@ -369,7 +369,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				}
-				if ((receivePacket.getData()[2] != ackNumber[0] && receivePacket.getData()[2] != ackNumber[0] + one) || (receivePacket.getData()[3] != ackNumber[1] && receivePacket.getData()[3] != ackNumber[1] + one)) {
+				if ((receivePacket.getData()[2] != ackNumber[0] && receivePacket.getData()[2] != ackNumber[0] - one) || (receivePacket.getData()[3] != ackNumber[1] && receivePacket.getData()[3] != ackNumber[1] - one)) {
 					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process, client thread is exiting").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
