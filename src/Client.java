@@ -668,7 +668,7 @@ public class Client extends Thread {
 	 * @author Kais
 	 */
 	private void printErrorMsg(byte[] errorMsg, int length) {
-		System.out.println("Client has received error packet from server: " + new String(Arrays.copyOfRange(errorMsg, 4, length - 4)));
+		System.out.println("Client has received error packet from server: " + new String(Arrays.copyOfRange(errorMsg, 4, length - 1)));
 	} // end method
 
 	/**

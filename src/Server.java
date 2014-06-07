@@ -133,8 +133,8 @@ public class Server extends Thread {
 		byte[] fileNameByteArray = new byte[innerzero-2];
 		System.arraycopy(data, 2, fileNameByteArray, 0, innerzero-2);
 		fileName = new String(fileNameByteArray);
-		byte[] modeArray = new byte[p.getLength() - innerzero - 1];
-		System.arraycopy(data, innerzero, modeArray, 0, p.getLength() - innerzero - 1);
+		byte[] modeArray = new byte[p.getLength() - innerzero - 2];
+		System.arraycopy(data, innerzero + 1, modeArray, 0, p.getLength() - innerzero - 2);
 		mode = new String(modeArray);
 
 		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength(), fileName, mode);
@@ -159,8 +159,6 @@ public class Server extends Thread {
 		} // end catch
 
 		//data = receivedata.getData(); // extract message
-		System.out.println("Packet received from ErrorSim");
-		System.out.println(receivedata.getLength());
 		if(verbose)
 			printPacketInfo(receivedata);
 

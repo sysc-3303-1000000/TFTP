@@ -74,7 +74,7 @@ public class ConnectionManager extends Thread {
 	public void run() {
 		System.out.println("Spawned ConnectionManager thread");
 		
-		if(!mode.equals("octet") || !mode.equals("netascii")){
+		if(!mode.equals("octet") && !mode.equals("netascii")){
 			byte emsg[] = ("Server has received an invalid mode").getBytes();
 			try {
 				send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));
@@ -380,7 +380,7 @@ public class ConnectionManager extends Thread {
 						worked = true;
 					} catch(SocketTimeoutException ste){
 						numberOfTimeouts++;
-						System.out.println("timeout");
+						System.out.println("Server timeout");
 					} catch(IOException ioe) {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 					} // end catch
@@ -532,7 +532,6 @@ public class ConnectionManager extends Thread {
 				throw new FileAlreadyExistsException();
 			}
 		}
-		System.out.println("");
 		FileOutputStream out = new FileOutputStream(System.getProperty("user.dir") + "\\Server\\output" + fileName, (blockNum > 1) ? true : false);
 		out.write(writeData, 0, writeData.length);
 		out.getFD().sync();
@@ -577,13 +576,12 @@ public class ConnectionManager extends Thread {
 		System.arraycopy(errorMessage, 0, msg, 4, errorMessage.length);
 		
 		msg[msg.length - 1] = (byte)0;
-				
 		
 		return msg;
 	}
 	
 	private void printErrorMessage(byte[] errorMessage, int length){
-		System.out.println("Server has received error packet from client: " + new String(Arrays.copyOfRange(errorMessage, 4, length - 4)));
+		System.out.println("Server has received error packet from client: " + new String(Arrays.copyOfRange(errorMessage, 4, length - 1)));
 	}
 
 	private void printInformation(DatagramPacket p) {
