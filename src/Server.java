@@ -20,6 +20,7 @@ public class Server extends Thread {
 	private boolean verbose;
 	private static String fileName;
 	private volatile boolean interrupted = false;
+	private static String mode;
 	/**
 	 * The following is the constructor for Server
 	 * 
@@ -83,22 +84,21 @@ public class Server extends Thread {
 	 */
 	private void verify(DatagramPacket p) {  
 		Request r = null;
+		boolean invalid = false;
 		if(p.getData()[0] != (byte)0)
-			System.exit(1); // TODO properly handle error
-
+			invalid = true;
 		else if(p.getData()[1] == (byte)5) {
-			System.exit(1);
-			return;
+			invalid = true;
 		}
 		else if(p.getData()[1] == (byte)1)
 			r = Request.READ;
 		else if(p.getData()[1] == (byte)2)
 			r = Request.WRITE;
 		else
-			return;
-		if(r == null)
-			return;
+			invalid = true;
 
+		
+		
 		int innerzero = 0;
 		boolean found = false;
 		System.out.println(p.getLength());
@@ -108,14 +108,36 @@ public class Server extends Thread {
 					innerzero = i;
 					found = true;
 				} // end if
+				else{
+					invalid = true;
+				}
 			}
 		}
+		
+		if(invalid)
+		{
+			byte emsg[] = ("Server has received an invalid Read or Write request").getBytes();
+			try {
+				receive.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), p.getPort()));
+				System.out.println("Server sent error packet 4");
+			} // end try
+			catch (UnknownHostException e1) {
+				System.err.println("Unknown Host: " + e1.toString());
+			} // end catch
+			catch (IOException e1) {
+				System.err.println("IO Exception: " + e1.toString());
+			} // end catch
+			return;
+		}
+		
 		byte[] fileNameByteArray = new byte[innerzero-2];
 		System.arraycopy(data, 2, fileNameByteArray, 0, innerzero-2);
 		fileName = new String(fileNameByteArray);
+		byte[] modeArray = new byte[p.getLength() - innerzero - 1];
+		System.arraycopy(data, innerzero, modeArray, 0, p.getLength() - innerzero - 1);
+		mode = new String(modeArray);
 
-
-		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength(), fileName);
+		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength(), fileName, mode);
 		newConnectionThread.start();
 	} // end method
 
@@ -144,6 +166,21 @@ public class Server extends Thread {
 
 		verify(receivedata);
 
+	}
+	
+	private byte[] createErrorMessage(byte type, byte errorMessage[]){
+		byte msg[] = new byte[errorMessage.length + 5];
+		
+		msg[0] = (byte)0;
+		msg[1] = (byte)5;
+		msg[2] = (byte)0;
+		msg[3] = type;
+		
+		System.arraycopy(errorMessage, 0, msg, 4, errorMessage.length);
+		
+		msg[msg.length - 1] = (byte)0;
+				
+		return msg;
 	}
 
 	public void interruptThread(){

@@ -25,6 +25,9 @@ public class ConnectionManager extends Thread {
 	private byte data[];
 	private int length;
 	private String fileName; 
+	private int TiD; // Transfer ID
+	private String mode;
+	
 	/**
 	 * The following is the constructor for ConnectionManager
 	 * @param verbose whether verbose mode is enabled
@@ -39,13 +42,15 @@ public class ConnectionManager extends Thread {
 	 * @author Colin
 	 * 
 	 */
-	public ConnectionManager(boolean verbose, byte[] data, int port, Request r, int length, String fileName) {
+	public ConnectionManager(boolean verbose, byte[] data, int port, Request r, int length, String fileName, String mode) {
 		this.verbose = verbose;
 		this.port = port;
+		this.TiD = port;
 		req = r;
 		this.data = data;
 		this.length = length;
 		this.fileName = fileName;
+		this.mode = mode;
 
 		try { // initialize the socket
 			send = new DatagramSocket();
@@ -68,6 +73,21 @@ public class ConnectionManager extends Thread {
 	 */
 	public void run() {
 		System.out.println("Spawned ConnectionManager thread");
+		
+		if(!mode.equals("octet") || !mode.equals("netascii")){
+			byte emsg[] = ("Server has received an invalid mode").getBytes();
+			try {
+				send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));
+				System.out.println("Server sent error packet 4");
+			} // end try
+			catch (UnknownHostException e1) {
+				System.err.println("Unknown Host: " + e1.toString());
+			} // end catch
+			catch (IOException e1) {
+				System.err.println("IO Exception: " + e1.toString());
+			} // end catch
+			return;
+		}
 
 		if (req == Request.WRITE) { // done by Kais to keep alive until full write is serviced, needs testing
 			// TODO write to file
@@ -96,6 +116,7 @@ public class ConnectionManager extends Thread {
 				System.err.println("Unknown IO exception error: " + ioe.getMessage());
 			} // end catch
 			System.out.println("Server sent first ack for write back to ErrorSim");
+			printInformation(sendData);
 			// while we receive data packets that are 516 in size (break inside while)
 			while (true) {
 				byte data[] = new byte[DATA_SIZE];
@@ -109,6 +130,7 @@ public class ConnectionManager extends Thread {
 						send.setSoTimeout(TIMEOUT);
 						send.receive(receivedPacket);
 						worked = true;
+						
 					} // end try
 					catch(SocketTimeoutException ste){
 						numberOfTimeouts++;
@@ -120,16 +142,88 @@ public class ConnectionManager extends Thread {
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
+					if(worked && receivedPacket.getPort() != TiD){
+						byte emsg[] = ("The Server thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
+						try {
+							send.send(new DatagramPacket(createErrorMessage((byte)5, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+							System.out.println("Server sent error packet 5");
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
+						} // end catch
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						worked = false;
+					}
 					if (worked && receivedPacket.getData()[1] == (byte)5) {
-						printErrorMessage(receivedPacket.getData());
+						printErrorMessage(data, receivedPacket.getLength());
 						return;
 					} // end if
+				}
+				if(receivedPacket.getLength() > 516){
+					byte emsg[] = ("The data packet server received is greater than 516 bytes, which should not be, server thread terminating").getBytes();
+					try {
+						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+						System.out.println("Server sent error packet 4");
+					} // end try
+					catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} // end catch
+					catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					} // end catch
+					return;
+				}
+				if(data[0] == (byte)0 && data[1] == (byte)4){
+					byte emsg[] = ("The last TFTP packet received was an ACK packet when it should have been a DATA packet, sever thread is exiting").getBytes();
+					try {
+						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));
+						System.out.println("Server sent error packet 4");
+					} // end try
+					catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} // end catch
+					catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					} // end catch
+					return;
+				}
+				else if (data[0] != (byte)0 || data[1] != (byte)3) {
+					byte emsg[] = ("Server has received an unidentified packet type, client thread is exiting").getBytes();
+					try {
+						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));
+						System.out.println("Server sent error packet 4");
+					} // end try
+					catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} // end catch
+					catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					} // end catch
+					return;
 				}
 				blockNum = 0;
 				blockNum += (data[2]) * 256;
 				blockNum += data[3];
+				if(blockNum != prevBlockNum && blockNum != prevBlockNum+1){
+					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process, client thread is exiting").getBytes();
+					try {
+						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));
+						System.out.println("Server sent error packet 4");
+					} // end try
+					catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} // end catch
+					catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					} // end catch
+					return;
+				}
 				
-				System.out.println("received blocknum: " + blockNum + " previous blocknum: " + prevBlockNum);
+				
+				System.out.println("Received Data packet from client");
+				printInformation(receivedPacket);
 
 				if(blockNum != prevBlockNum){
 					try {
@@ -197,6 +291,8 @@ public class ConnectionManager extends Thread {
 				catch (IOException ioe) {
 					System.err.println("Unknown IO exception error: " + ioe.getMessage());
 				} // end catch
+				System.out.println("Sent ACK packet to client");
+				printInformation(sendData);
 				if (receivedPacket.getLength() < 516) { // repeat unless that was the last data packet
 					System.out.println("Closing Connectionmanager thread");
 					break;
@@ -254,9 +350,14 @@ public class ConnectionManager extends Thread {
 				System.err.println("Unknown host exception error: " + uhe.getMessage());
 			} // end catch
 			
+			if(sendData.getLength() < 516){
+				finalBlock = true;
+				finalBlockNum = 1;
+			}
 
-			//printInformation(sendData);
-
+			System.out.println("Server sent Data packet to client");
+			printInformation(sendData);
+			
 			while(true){
 				byte data[] = new byte[DATA_SIZE];
 				receivedPacket = new DatagramPacket(data, data.length);
@@ -270,6 +371,7 @@ public class ConnectionManager extends Thread {
 						catch (IOException ioe) {
 							System.err.println("Unknown IO exception error: " + ioe.getMessage());
 						} // end catch
+						resend = false;
 					}
 					try{
 						System.out.println("Server receiving packet from intermediate...");
@@ -283,15 +385,73 @@ public class ConnectionManager extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 					} // end catch
 					if (worked && receivedPacket.getData()[1] == (byte)5) {
-						printErrorMessage(receivedPacket.getData());
+						printErrorMessage(data, receivedPacket.getLength());
 						return;
 					} // end if
 					if(numberOfTimeouts == 5){
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
+					if(worked && receivedPacket.getPort() != TiD){
+						byte emsg[] = ("The Server thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
+						try {
+							send.send(new DatagramPacket(createErrorMessage((byte)5, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+							System.out.println("Server sent error packet 5");
+						} // end try
+						catch (UnknownHostException e1) {
+							System.err.println("Unknown Host: " + e1.toString());
+						} // end catch
+						catch (IOException e1) {
+							System.err.println("IO Exception: " + e1.toString());
+						} // end catch
+						worked = false;
+					}
 				}
-				
+				if(data[0] == (byte)0 && data[1] == (byte)1){
+					resend = true;
+				}
+				else if (receivedPacket.getLength() > 4){
+					byte emsg[] = ("The data packet server received is greater than 516 bytes, which should not be, server thread terminating").getBytes();
+					try {
+						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivedPacket.getPort()));
+						System.out.println("Server sent error packet 4");
+					} // end try
+					catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} // end catch
+					catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					} // end catch
+					return;
+				}
+				if(data[0] == (byte)0 && data[1] == (byte)3){
+					byte emsg[] = ("The last TFTP packet received was a Data packet when it should have been an ACK packet, sever thread is exiting").getBytes();
+					try {
+						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));
+						System.out.println("Server sent error packet 4");
+					} // end try
+					catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} // end catch
+					catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					} // end catch
+					return;
+				}
+				else if (data[0] != (byte)0 || data[1] != (byte)3) {
+					byte emsg[] = ("Server has received an unidentified packet type, Server thread is exiting").getBytes();
+					try {
+						send.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), TiD));
+						System.out.println("Server sent error packet 4");
+					} // end try
+					catch (UnknownHostException e1) {
+						System.err.println("Unknown Host: " + e1.toString());
+					} // end catch
+					catch (IOException e1) {
+						System.err.println("IO Exception: " + e1.toString());
+					} // end catch
+					return;
+				}
 				receivedPacket.setData(Arrays.copyOfRange(data, 0, 4));
 
 				System.out.println("Received packet from intermediate...");
@@ -300,16 +460,15 @@ public class ConnectionManager extends Thread {
 				blockNum = 0;
 				blockNum += (data[2]) * 256;
 				blockNum += data[3];
-
 				blockNum++;
-				System.out.println("blocknum: " + blockNum + "prevblock: " + prevBlockNum);
-				if(blockNum == prevBlockNum){		
+				
+				if(!resend && blockNum == prevBlockNum){		
 					resend = false;
 				}
 				else{
 					resend = true;
 					if(finalBlock && blockNum > finalBlockNum){
-						System.out.println("Exiting, blocknum: " + blockNum);
+						System.out.println("Server has received final ACK, shutting down");
 						break;
 					}
 
@@ -356,7 +515,8 @@ public class ConnectionManager extends Thread {
 						finalBlock = true;
 					}
 					prevBlockNum = blockNum;
-					System.out.println("prev block num after set: " + prevBlockNum + " block num: " + blockNum);
+					System.out.println("Sent Data packet to client");
+					printInformation(sendData);
 				}
 			}
 		} // end if
@@ -418,11 +578,12 @@ public class ConnectionManager extends Thread {
 		
 		msg[msg.length - 1] = (byte)0;
 				
+		
 		return msg;
 	}
 	
-	private void printErrorMessage(byte[] errorMessage){
-		System.out.println("Server has received error packet from client: " + new String(Arrays.copyOfRange(errorMessage, 4, errorMessage.length - 4)));
+	private void printErrorMessage(byte[] errorMessage, int length){
+		System.out.println("Server has received error packet from client: " + new String(Arrays.copyOfRange(errorMessage, 4, length - 4)));
 	}
 
 	private void printInformation(DatagramPacket p) {

@@ -145,7 +145,7 @@ public class Client extends Thread {
 			} // end if
 		} // end whileloop
 		if (receivePacket.getData()[1] == five) {
-			printErrorMsg(receivePacket.getData());
+			printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 			return;
 		} // end if
 		// prints out the information on the received packet
@@ -302,7 +302,7 @@ public class Client extends Thread {
 						worked = false;
 					} // end catch
 					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) {
-						printErrorMsg(receivePacket.getData());
+						printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 						return;
 					} // end if
 					if (numberOfTimeouts == 5) {
@@ -477,7 +477,7 @@ public class Client extends Thread {
 						worked = false;
 					} // end catch
 					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) {
-						printErrorMsg(receivePacket.getData());
+						printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 						return;
 					} // end if\
 					if (receivePacket.getPort() != threadPort && worked) {
@@ -667,15 +667,8 @@ public class Client extends Thread {
 	 * @version May 30 2014
 	 * @author Kais
 	 */
-	private void printErrorMsg(byte[] errorMsg) {
-		byte msg[] = new byte[errorMsg.length - 5];
-		
-		/* Retrieve the error message from the entirety of the data from the error packet */
-		for (int i = 0; i < msg.length; i++) {
-			msg[i] = errorMsg[i+4];
-		} // end forloop
-
-		System.out.println("Client has received error packet from server: " + new String(msg));
+	private void printErrorMsg(byte[] errorMsg, int length) {
+		System.out.println("Client has received error packet from server: " + new String(Arrays.copyOfRange(errorMsg, 4, length - 4)));
 	} // end method
 
 	/**
