@@ -309,7 +309,7 @@ public class Client extends Thread {
 						System.out.println("Client has timed out 5 times waiting for the next data packet from server");
 						return;
 					} // end if
-					if (receivePacket.getPort() != threadPort) {
+					if (receivePacket.getPort() != threadPort && worked) {
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
@@ -480,7 +480,7 @@ public class Client extends Thread {
 						printErrorMsg(receivePacket.getData());
 						return;
 					} // end if\
-					if (receivePacket.getPort() != threadPort) {
+					if (receivePacket.getPort() != threadPort && worked) {
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
