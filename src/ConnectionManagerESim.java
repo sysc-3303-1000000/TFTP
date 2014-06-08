@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.net.*;
-import java.util.Arrays;
 
 /**
  * The following is implementation for the ConnectionManagerESim which will form
@@ -1170,7 +1169,7 @@ public class ConnectionManagerESim extends Thread {
 					corruptPortClient();
 					//we go back to operating as normal
 					mode = 0;
-					return true;
+					serverReceive();
 				}//end if
 
 				//send to the client
