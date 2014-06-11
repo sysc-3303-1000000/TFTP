@@ -148,7 +148,24 @@ public class ConnectionManagerESim extends Thread {
 				end = corruptOp();
 			}
 			else if (mode == 8) {
-				end = invalidTID();		
+				// check if we are changing the TID of the first DATA packet in a read
+				if (packetType == 3 && packetNumber == 1) { // we CANNOT change this as there is no way to know the correct TID
+					System.out.println("ConnectionManagerESim: You cannot change the TID for a READ and the first DATA packet as there is no way to validate");
+					System.out.println("ConnectionManagerESim: Changing back to normal mode");
+					mode = 0;
+					end = false;
+				} // end if
+				// check if we are changing the TID of the first ACK in a write
+				else if (packetType == 4 && packetNumber == 0) { // we CANNOT change this is as there is no way to know the correct TID 
+					System.out.println("ConnectionManagerESim: You cannot change the TID for a WRITE and the first ACK (00) packet as there is no way to validate");
+					System.out.println("ConnectionManagerESim: Changing back to normal mode");
+					mode = 0;
+					end = false;
+				}// end else if
+				// otherwise, proceed with the corruption
+				else {
+					end = invalidTID();
+				}
 			}
 		}//end while
 
@@ -1281,7 +1298,7 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 27 2014
 	 * 
-	 * Latest Change: Added 
+	 * Latest Change: Added ability to recognize if an error message is received
 	 * @version May 31 2014
 	 * @author Kais
 	 */	
@@ -1349,9 +1366,9 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 27 2014
 	 * 
-	 * Latest Change: 
-	 * @version May 27 2014
-	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
+	 * Latest Change: Added ability to recognize if an error message is received
+	 * @version May 31 2014
+	 * @author Kais
 	 */	
 	private void serverReceive(){
 
@@ -1542,8 +1559,9 @@ public class ConnectionManagerESim extends Thread {
 	/** 
 	 * The following method will create a corrupt TID to send to the server
 	 * @since June 5 2014
-	 * Latest Change: Added the method
-	 * @version June 4 2014
+	 * 
+	 * Latest Change: Print the error message received from the client
+	 * @version June 11 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
 	 */
 	private void corruptPortServer() {
@@ -1598,6 +1616,7 @@ public class ConnectionManagerESim extends Thread {
 		if (receiveServerPacket.getData()[1] == (byte)5 && receiveServerPacket.getData()[2] == (byte)0 && receiveServerPacket.getData()[3] == (byte)5) {
 			if(verbose) 
 				System.out.println("ConnectionManagerESim: server has sent us an error packet with error code 5");
+				System.out.println("ConnectionManagerESim: server has the following error message: " + new String(receiveServerPacket.getData()));
 		}
 		else {
 			if (verbose)
@@ -1665,6 +1684,8 @@ public class ConnectionManagerESim extends Thread {
 		if (receiveClientPacket.getData()[1] == (byte)5 && receiveClientPacket.getData()[2] == (byte)0 && receiveClientPacket.getData()[3] == (byte)5) {
 			if(verbose) 
 				System.out.println("ConnectionManagerESim: client has sent us an error packet with error code 5");
+				System.out.println("ConnectionManagerESim: client has the following error message: " + new String(receiveClientPacket.getData()));
+
 		}
 		else {
 			if (verbose)
