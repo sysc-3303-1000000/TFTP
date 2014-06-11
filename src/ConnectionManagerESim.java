@@ -985,9 +985,9 @@ public class ConnectionManagerESim extends Thread {
 							System.out.println("ConnectionManagerESim: ACK packet will be corrupted.");
 						int x = corruptPos() ;
 						if(packetNumber == 7)
-							serverData[x] = (byte)8;	//Packet will now have an invalid request
+							clientData[x] = (byte)8;	//Packet will now have an invalid request
 						else 
-							serverData[x] = (byte)7;	//Packet will now have an invalid request
+							clientData[x] = (byte)7;	//Packet will now have an invalid request
 					} // end if
 				}
 				serverSend();
@@ -1049,7 +1049,7 @@ public class ConnectionManagerESim extends Thread {
 							System.out.println("ConnectionManagerESim: DATA packet will be corrupted.");
 						int x = corruptPos() ;
 						if(packetNumber == 7)
-							serverData[x] = (byte)8;	//Packet will now have an invalid request
+							clientData[x] = (byte)8;	//Packet will now have an invalid request
 						else 
 							clientData[x] = (byte)7;	//Packet will now have an invalid request
 					} // end if
