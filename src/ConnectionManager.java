@@ -381,6 +381,7 @@ public class ConnectionManager extends Thread {
 					} catch(SocketTimeoutException ste){
 						numberOfTimeouts++;
 						System.out.println("Server timeout");
+						resend = true;
 					} catch(IOException ioe) {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 					} // end catch
@@ -405,6 +406,7 @@ public class ConnectionManager extends Thread {
 							System.err.println("IO Exception: " + e1.toString());
 						} // end catch
 						worked = false;
+						resend = true;
 					}
 				}
 				if(data[0] == (byte)0 && data[1] == (byte)1){
