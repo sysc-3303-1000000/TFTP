@@ -297,7 +297,7 @@ public class ConnectionManagerESim extends Thread {
 					}// end if
 					return false;					
 				} // end if
-				else if (lastPacketRead) {
+				else if (lastPacketRead || errorReceived) {
 					// receive from client
 					clientReceive();
 					// check to see if this is the packet that we want to lose
@@ -408,7 +408,7 @@ public class ConnectionManagerESim extends Thread {
 					}// end if
 
 					// check to see if this is the last packet
-					if (lastPacketWrite) { // this is the last ACK packet that we are sending back to the client
+					if (lastPacketWrite || errorReceived) { // this is the last ACK packet that we are sending back to the client
 						return true;
 					}
 					else {
@@ -422,7 +422,7 @@ public class ConnectionManagerESim extends Thread {
 				clientSend();
 
 				// we just sent the last ACK packet to the client, we are done.
-				if (lastPacketWrite)
+				if (lastPacketWrite || errorReceived)
 					return true;
 				else
 					return false;
@@ -464,7 +464,6 @@ public class ConnectionManagerESim extends Thread {
 
 				//send to the client
 				clientSend();
-
 				return false;					
 			} // end else if
 		}//end if
