@@ -1273,6 +1273,13 @@ public class ConnectionManagerESim extends Thread {
 					}// end if
 					// corrupt the packet being sent to the server
 					corruptPortServer();
+					clientReceive();
+					serverSend();
+					if (sendServerPacket.getLength() < DATA_SIZE && !firstPacket) {
+						lastPacketWrite = true;
+						trueLastPacket[0] = sendServerPacket.getData()[2];
+						trueLastPacket[1] = sendServerPacket.getData()[3];
+					} // end if
 					//we go back to operating as normal
 					mode = 0;
 				}//end if
