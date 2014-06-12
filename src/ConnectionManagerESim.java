@@ -1092,8 +1092,8 @@ public class ConnectionManagerESim extends Thread {
 	 * The client and server must ensure that the packet is coming from the expected source
 	 * If not, they must send error code 05 to the other party and continue working 
 	 * @since June 5 2014
-	 * Latest Change: Added the method
-	 * @version June 4 2014
+	 * Latest Change: Fixed to ensure proper end in our method
+	 * @version June 11 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
 	 */
 	private boolean invalidTID(){
@@ -1134,9 +1134,11 @@ public class ConnectionManagerESim extends Thread {
 					//send to the client
 					clientSend();
 					//check to see if this is the last packet (DATA < 512b 
-					if(sendClientPacket.getLength() < DATA_SIZE)
+					if(sendClientPacket.getLength() < DATA_SIZE) {
 						lastPacketRead = true;
-
+						trueLastPacket[0] = sendClientPacket.getData()[2];
+						trueLastPacket[1] = sendClientPacket.getData()[3];
+					}// end if
 					return false;					
 				} // end if
 				else if (lastPacketRead) {
@@ -1192,9 +1194,11 @@ public class ConnectionManagerESim extends Thread {
 				//send to the client
 				clientSend();
 				//check to see if this is the last packet (DATA < 512b 
-				if(sendClientPacket.getLength() < DATA_SIZE)
+				if(sendClientPacket.getLength() < DATA_SIZE) {
 					lastPacketRead = true;
-
+					trueLastPacket[0] = sendClientPacket.getData()[2];
+					trueLastPacket[1] = sendClientPacket.getData()[3];
+				}// end if
 				return false;	
 			} // end else if
 		}//end if
@@ -1277,9 +1281,11 @@ public class ConnectionManagerESim extends Thread {
 					// send to the server
 					serverSend();
 				} // end else
-				if (sendServerPacket.getLength() < DATA_SIZE)
+				if (sendServerPacket.getLength() < DATA_SIZE) {
 					lastPacketWrite = true;
-
+					trueLastPacket[0] = sendServerPacket.getData()[2];
+					trueLastPacket[1] = sendServerPacket.getData()[3];
+				} // end if
 				// we need to wait on a server packet
 				serverReceive(); 
 
