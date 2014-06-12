@@ -185,7 +185,7 @@ public class ErrorSim {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid packet type");
-			System.out.println("Please enter the type of packet you would like to corrupt:\n1 - RRQ\n2 - WRQ\n3 - DATA\n4 - ACK");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n1 or 2 - R/WRQ\n3 - DATA\n4 - ACK");
 			packetType = input.nextInt();
 			
 			// check if it is a DATA or ACK that we are changing, grab which packet number
