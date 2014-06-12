@@ -290,9 +290,11 @@ public class ConnectionManagerESim extends Thread {
 					//send to the client
 					clientSend();
 					//check to see if this is the last packet (DATA < 512b 
-					if(sendClientPacket.getLength() < DATA_SIZE)
+					if(sendClientPacket.getLength() < DATA_SIZE) {
 						lastPacketRead = true;
-
+						trueLastPacket[0] = sendClientPacket.getData()[2];
+						trueLastPacket[1] = sendClientPacket.getData()[3];
+					}// end if
 					return false;					
 				} // end if
 				else if (lastPacketRead) {
@@ -344,9 +346,11 @@ public class ConnectionManagerESim extends Thread {
 				//send to the client
 				clientSend();
 				//check to see if this is the last packet (DATA < 512b 
-				if(sendClientPacket.getLength() < DATA_SIZE)
+				if(sendClientPacket.getLength() < DATA_SIZE) {
 					lastPacketRead = true;
-
+					trueLastPacket[0] = sendClientPacket.getData()[2];
+					trueLastPacket[1] = sendClientPacket.getData()[3];
+				}// end if
 				return false;					
 			} // end else if
 		}//end if
@@ -388,7 +392,9 @@ public class ConnectionManagerESim extends Thread {
 				// check to see if packet is < 512 bytes
 				if (receiveClientPacket.getLength() < DATA_SIZE) {
 					lastPacketWrite = true;
-				}
+					trueLastPacket[0] = receiveClientPacket.getData()[2];
+					trueLastPacket[1] = receiveClientPacket.getData()[3];
+				}// end if
 
 				serverSend();
 
@@ -448,9 +454,11 @@ public class ConnectionManagerESim extends Thread {
 				// send to the server
 				serverSend();
 
-				if (sendServerPacket.getLength() < DATA_SIZE)
+				if (sendServerPacket.getLength() < DATA_SIZE) {
 					lastPacketWrite = true;
-
+					trueLastPacket[0] = sendServerPacket.getData()[2];
+					trueLastPacket[1] = sendServerPacket.getData()[3];
+				}// end if
 				// we need to wait on a server packet
 				serverReceive(); 
 
