@@ -495,7 +495,7 @@ public class Client extends Thread {
 						worked = false;
 					} // end if
 					else if(worked) {
-						receivePacket.setData(Arrays.copyOfRange(reply, 0, 4));
+						receivePacket.setData(Arrays.copyOfRange(reply, 0, receivePacket.getLength()));
 					} // end if
 					
 					if (numberOfTimeouts == 5) {

@@ -1565,7 +1565,8 @@ public class ConnectionManagerESim extends Thread {
 					serverLength = 517;
 					return 516;	//this will add an extra byte to the end of the data, (if data is not 512, then this will have no affect)
 				}
-			}				
+			}
+		System.out.println("Corrupt position 0");
 		return 0;
 	}
 
