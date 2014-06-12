@@ -223,7 +223,7 @@ public class ErrorSim {
 			@SuppressWarnings("resource")
 			Scanner input = new Scanner(System.in);
 			System.out.println("ErrorSim will be running in Corrupt packet mode - Invalid file mode");
-			System.out.println("Please enter the type of packet you would like to corrupt:\n1 - RRQ\n2 - WRQ");
+			System.out.println("Please enter the type of packet you would like to corrupt:\n1 OR 2 R/WRQ");
 			packetType = input.nextInt();
 			
 			// we are changing the RRQ and WRQ so the packet number that we are changing is 1

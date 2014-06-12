@@ -144,8 +144,11 @@ public class ConnectionManagerESim extends Thread {
 			else if (mode == 3) {
 				end = duplicatedOp();
 			}
-			else if (mode == 4 || mode == 5 || mode == 6 || mode == 7) {
+			else if (mode == 4 || mode == 5 || mode == 7) {
 				end = corruptOp();
+			}
+			else if (mode == 6) {
+				end = corruptMode();
 			}
 			else if (mode == 8) {
 				// check if we are changing the TID of the first DATA packet in a read
@@ -1088,6 +1091,47 @@ public class ConnectionManagerESim extends Thread {
 	} //end method
 
 	/** 
+	 * The following method will simulate an invalid file mode on the request packets
+	 * The server must ensure that the packet has a valid file mode: netascii or octet
+	 * If not, they must send error code 04 to the other party and shuts down
+	 * @since June 11 2014
+	 * Latest Change: Added method to handle file mode
+	 * @version June 11 2014
+	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
+	 */
+	private boolean corruptMode() {
+		if (packetType == 1 || packetType == 2){ // corrupting the appropriate request for a file mode
+			if (verbose)
+				System.out.println("ConnectionManagerESim: corrupting File Mode in request");			
+			
+			int count = 0;
+			int index = 0;
+			// parses the request, to change the file mode
+			for (int i = 0; i < clientData.length; i++) {
+				if (clientData[i] == (byte)0)
+						count++;
+				if (count == 2) {
+					index = i; 
+					break;
+				}
+			}// end for
+			clientData[index+1] = (byte)48;
+			
+			if (verbose)
+				System.out.println("ConnectionManagerESim: simulating a corrupted request packet");
+			// send server invalid file mode	
+			serverSend();
+			// receive error packet from server
+			serverReceive();
+			// send error to client
+			clientSend();
+			return true; 
+		}
+		mode = 0;
+		return false;
+	}
+	
+	/** 
 	 * The following method will simulate an invalid TID on the packets
 	 * The client and server must ensure that the packet is coming from the expected source
 	 * If not, they must send error code 05 to the other party and continue working 
@@ -1531,8 +1575,6 @@ public class ConnectionManagerESim extends Thread {
 			return 1;	//position of the packet type is 1
 		else if (mode == 5)	//Invalid block number
 			return 3;	//position of the block number is 2 and 3
-		else if (mode == 6)	//Invalid file mode
-			return clientData.length-3;	//position of file mode
 		else if (mode == 7)	//Invalid packet size
 			if (requestType == Request.WRITE) { // this is a write request
 				if (packetType == 4){  // ACK packet being delayed from the server 
