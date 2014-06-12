@@ -12,8 +12,8 @@ import java.util.Scanner;
  * There will also be a user interface to get options to run in Normal mode, any of the errors above, or to shut down the simulation
  * @since May 11 2014
  * 
- * @author 1000000
- * @version May 24 2014
+ * @author Mohammed Ahmed-Muhsin & Samson Truong
+ * @version June 12 2014
  *
  */
 public class ErrorSim {
@@ -26,15 +26,15 @@ public class ErrorSim {
 	private DatagramPacket receiveClientPacket;
 	// the byte array for the data being stored
 	private byte data[];
-	// will determine if we go into verbose mode or a silent mode
-	// to have full implementation in a later version
-	private boolean verbose;
+	// will determine the mode to work in
+	private static int output;
 	// value of how much we want to delay the packet by -- default to 0 if we are not running in delayed mode or duplicate
 	private int delayAmount = 0;
 	// stores which packet type we are altering -- default is 0 if we are running normally
 	private int packetType = 0;
 	// stores which packet number we are altering -- default is 0 if we are running normally
 	private int packetNumber = 0;
+	
 	/**
 	 * 	Will determine the user input based on an integer value
 	 * 0 Normal packets
@@ -46,23 +46,14 @@ public class ErrorSim {
 	 * 6 Invalid file mode
 	 * 7 Invalid TID
 	 * 9 Shutdown Listener
+	 * 10 Set the output level
 	 */
 	private static int userChoice;
 	
-	/**
-	 * The following is the run method for ErrorSim, used to execute code upon starting the thread.
-	 * It will create a new thread for every packet received and this new thread will send the response
-	 * to the server.
-	 * 
-	 * @since May 16 2014
-	 * 
-	 * Latest Change: First revision, added basic implementation based on assumed functionality
-	 * @version May 16 2014
-	 * @author Kais
-	 */
-	public ErrorSim(boolean verbose) {	
+
+	public ErrorSim() {	
 		data = new byte[DATA_SIZE];
-		this.verbose = verbose;
+		output = 2; // initialize the level of output to medium by default
 		// initialize the DatagramSocket receiveSocket to bind to well-known port 68
 		try {
 			receiveSocket = new DatagramSocket(2068);
@@ -74,32 +65,6 @@ public class ErrorSim {
 		receiveClientPacket = new DatagramPacket(data, data.length);
 	} // end constructor 
 	
-	/**
-	 * The following is used to print information about the Packet.
-	 * @param p DatagramPacket which will have its information printed
-	 * 
-	 * @since May 16 2014
-	 * 
-	 * Latest Change: Added length being sent
-	 * @version May 17 2014
-	 * @author Colin
-	 * 
-	 */
-	private void printPacketInfo(DatagramPacket p) {
-		
-		// print out the information on the packet
-		System.out.println("PACKET INFORMATION");
-		System.out.println("Host: " + p.getAddress());
-		System.out.println("Host port: " + p.getPort());
-		System.out.println("Containing the following \nString: " + new String(p.getData()));
-		System.out.println("Length of packet: " + p.getLength());
-		System.out.println("Bytes: ");
-		for (int i = 0; i < p.getLength(); i++) {
-			System.out.print(Integer.toHexString(p.getData()[i]));
-		} // end forloop
-		System.out.println("\n******************************************************");
-		System.out.println("\n\n");
-	} // end method
 	
 	/**
 	 * The following will be used to listen to the request being sent in by the client and spawn a new thread to deal 
@@ -291,10 +256,7 @@ public class ErrorSim {
 			System.err.println("IOException error: " + ie.getMessage());
 		} // end catch
 
-		if(verbose)
-			printPacketInfo(receiveClientPacket);
-
-		Thread connectionmanager = new ConnectionManagerESim(verbose, userChoice, delayAmount, packetType, packetNumber, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
+		Thread connectionmanager = new ConnectionManagerESim(output, userChoice, delayAmount, packetType, packetNumber, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
 		connectionmanager.start();
 
 		while (connectionmanager.getState() != Thread.State.TERMINATED) {
@@ -333,15 +295,16 @@ public class ErrorSim {
 	} // end method
 	
 	/**
-	 * The main class for the Error Simulator
+	 * The following is the run method for ErrorSim, used to execute code upon starting the thread.
+	 * It will create a new thread for every packet received and this new thread will send the response
+	 * to the server.
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Added ability to receive a user input to see which error we are simulating
-	 * @version May 21 2014
+	 * Latest Change: Added functionality to receive an output
+	 * @version June 12 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong
-	 */	
-	// main class for the Error Simulator
+	 */
 	public static void main(String[] args) {
 		// the scanner to receive a user input
 		Scanner in = new Scanner(System.in);
@@ -355,26 +318,44 @@ public class ErrorSim {
 				
 				// print out information for the user depending on the mode of run they want to use
 				System.out.println("0 - Normal\n1 - Lose a packet\n2 - Delay a packet\n3 - Duplicate\n4 - Invalid packet type\n5 - Invalid block number\n6 - Invalid file mode\n7"
-						+ " - Invalid packet size\n8 - Invalid TID\n9 - Shutdown\n\n");
+						+ " - Invalid packet size\n8 - Invalid TID\n9 - Shutdown\n10 - Set output level\n\n");
 				System.out.println("Please enter a mode for the Error Simulator to start in:");
 				
 				userChoice = in.nextInt();
 				// check if a valid choice has been entered
 				if (userChoice == 0 || userChoice == 1 || userChoice == 2 || userChoice == 3 ||userChoice == 4 ||userChoice == 5 ||userChoice == 6 ||userChoice == 7 || userChoice == 8 || userChoice == 9) {
 					validChoice = true;
-				}
+				}// end if
+				else if (userChoice == 10) { // user wants to change the output level
+					@SuppressWarnings("resource")
+					Scanner input = new Scanner(System.in);
+					System.out.println("Please enter the level of output:\n1 - Debug (Full packet information)\n2 - Verbose (Some statements)\n3 - Silent (Minimal output)");
+					output = input.nextInt();
+					if (output == 1)
+						System.out.println("System be running in full debug. This will include packet information as well as error messages and mode changes");
+					else if (output == 2) 
+						System.out.println("System be running in vebose. Only error messages and mode changes will be displayed");
+					else if (output == 3)
+						System.out.println("System be running in silent mode. Only errors will be displayed");
+					else { 
+						output = 2;
+						System.out.println("Invalid output setting choice! Using default (Verbose)");
+					}
+					// go back to main menu
+					validChoice = false; 
+				}// end else if
 				else {
 					System.out.println("Invalid choice entered. Please try again!");
 					validChoice = false;
-				}
+				}// end else
 			} // end while
 			
 			// shutdown the listener 
 			if (userChoice == 9) {
 				shutdown = true;
 			}
-			ErrorSim esim = new ErrorSim(true);
-
+			ErrorSim esim = new ErrorSim();
+			
 			esim.sendReceive();
 			validChoice = false;
 			receiveSocket.close();
