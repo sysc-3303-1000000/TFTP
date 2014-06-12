@@ -149,14 +149,14 @@ public class ConnectionManagerESim extends Thread {
 			}
 			else if (mode == 8) {
 				// check if we are changing the TID of the first DATA packet in a read
-				if (packetType == 3 && packetNumber == 1) { // we CANNOT change this as there is no way to know the correct TID
+				if (requestType == Request.READ && packetType == 3 && packetNumber == 1) { // we CANNOT change this as there is no way to know the correct TID
 					System.out.println("ConnectionManagerESim: You cannot change the TID for a READ and the first DATA packet as there is no way to validate");
 					System.out.println("ConnectionManagerESim: Changing back to normal mode");
 					mode = 0;
 					end = false;
 				} // end if
 				// check if we are changing the TID of the first ACK in a write
-				else if (packetType == 4 && packetNumber == 0) { // we CANNOT change this is as there is no way to know the correct TID 
+				else if (requestType == Request.WRITE && packetType == 4 && packetNumber == 0) { // we CANNOT change this is as there is no way to know the correct TID 
 					System.out.println("ConnectionManagerESim: You cannot change the TID for a WRITE and the first ACK (00) packet as there is no way to validate");
 					System.out.println("ConnectionManagerESim: Changing back to normal mode");
 					mode = 0;
@@ -1264,7 +1264,6 @@ public class ConnectionManagerESim extends Thread {
 					// receive from client
 					clientReceive();
 				}// end if
-				firstPacket = false; // this is no longer the first packet
 
 				// check to see if this is the packet that we want to corrupt
 				if (foundPacket(receiveClientPacket)) { // this is the packet we want to corrupt
@@ -1281,7 +1280,7 @@ public class ConnectionManagerESim extends Thread {
 					// send to the server
 					serverSend();
 				} // end else
-				if (sendServerPacket.getLength() < DATA_SIZE) {
+				if (sendServerPacket.getLength() < DATA_SIZE && !firstPacket) {
 					lastPacketWrite = true;
 					trueLastPacket[0] = sendServerPacket.getData()[2];
 					trueLastPacket[1] = sendServerPacket.getData()[3];
@@ -1293,6 +1292,7 @@ public class ConnectionManagerESim extends Thread {
 				clientSend();
 				if (lastPacketWrite)
 					return true;	// Last packet is now sent. The thread will close
+				firstPacket = false; // this is no longer the first packet
 				return false;					
 			} // end else if
 		}//end if
