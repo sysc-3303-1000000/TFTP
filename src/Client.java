@@ -479,7 +479,10 @@ public class Client extends Thread {
 					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) {
 						printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 						return;
-					} // end if\
+					} // end if
+					if (worked && receivePacket.getLength() != 4 && endFile) {
+						System.out.println("We got an incorrect packet as our last packet for write, but connection has been dropped due to sending last data packet, so not sending error packet 4.");
+					} // end if
 					if (receivePacket.getPort() != threadPort && worked) {
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
 						try {
@@ -497,7 +500,9 @@ public class Client extends Thread {
 					else if(worked) {
 						receivePacket.setData(Arrays.copyOfRange(reply, 0, receivePacket.getLength()));
 					} // end if
-					
+					if (worked && receivePacket.getLength() != 4 && endFile) {
+						System.out.println("We got an incorrect packet as our last packet for write, but connection has been dropped due to sending last data packet, so not sending error packet 4.");
+					} // end if
 					if (numberOfTimeouts == 5) {
 						System.out.println("Client has timed out 5 times waiting for the next ack packet from server");
 						return;
