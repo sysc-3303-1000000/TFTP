@@ -1,0 +1,8 @@
+sent error packet X with error message : ""
+received error packet X with error message: ""
+unable to establish connection with server
+make less verbose
+show when duplicate comes in
+output what invalid mode was (received neeetascii)
+changed TiD (not corrupt packet)
+TiD : send from wrong place and right place (wait to get error?)
