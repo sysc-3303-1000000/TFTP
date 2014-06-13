@@ -543,8 +543,8 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: Allow user to specify which packet to delay and by how much
-	 * @version May 29 2014
+	 * Latest Change: Allows for function to recognize an error
+	 * @version June 13 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */
 	private boolean delayedOp()
@@ -553,8 +553,10 @@ public class ConnectionManagerESim extends Thread {
 			// check to see if the which packet is the one being delayed
 			if (packetType == 1) { // RRQ packet is being delayed
 
-				if(debug || verbose)
-					System.out.println("ConnectionManagerESim: RRQ packet will be delayed. Thread will sleep now");
+				if(debug || verbose) {
+					System.out.println("ConnectionManagerESim: This is the RRQ packet.");
+					System.out.println("ConnectionManagerESim: Delaying packet..");
+				}// end if
 				try {
 					Thread.sleep(delay);	//delays the packet for the specified amount
 				}// end  try
@@ -783,35 +785,42 @@ public class ConnectionManagerESim extends Thread {
 	 */
 	private boolean duplicatedOp()
 	{
-		// check to see if the which packet is the one being duplicated
-		if (packetType == 1 || packetType == 2) { // RRQ or WRQ packet is being duplicated
-			if (debug)
-				System.out.println("ConnectionManagerESim: RRQ/WRQ packet will be duplicated. Sending first packet");
-			serverSend();
-			if(debug)
-				System.out.println("ConnectionManagerESim: Thread will sleep now");
-			try {
-				Thread.sleep(delay);	//delays the packet for the specified amount
-			}// end  try
-			catch (InterruptedException e) { } // end catch
-			if (debug)
-				System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
-			serverSend();
-
-			serverReceive();
-
-			clientSend();
-
-			// switch back to normal operation
-			mode = 0;
-
-			firstPacket = false;
-			return false;
-		}// end if
-
 		// now we check if this is a read or write so we can duplicate on the appropriate packet
-		else if (requestType == Request.READ) { // this is a read request
-			if (packetType == 3) { // DATA packet being duplicated from the server 
+		if (requestType == Request.READ) { // this is a read request
+			// check to see if the which packet is the one being duplicated
+			if (packetType == 1) { // RRQ packet is being duplicated
+				if (debug || verbose) {
+					System.out.println("ConnectionManagerESim: RRQ packet will be duplicated. Sending first packet");
+				}// end if
+				serverSend();
+				if(debug || verbose)
+					System.out.println("ConnectionManagerESim: Thread will sleep now");
+				try {
+					Thread.sleep(delay);	//delays the packet for the specified amount
+				}// end  try
+				catch (InterruptedException e) { } // end catch
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms");
+				serverSend();
+				if (errorReceived)
+					return true;
+				serverReceive();
+
+				clientSend();
+
+				// switch back to normal operation
+				mode = 0;
+
+				firstPacket = false;
+				return false;
+			}// end if
+			else if (packetType == 2) { // delay a WRQ packet which will never happen
+				if (debug || verbose) 
+					System.out.println("ConnectionManagerESim: It is a read request, and a WRQ is requested to duplicate. This will never happen. Changing back to normal mode");
+				mode = 0;
+				return false;
+			} // end else if
+			else if (packetType == 3) { // DATA packet being duplicated from the server 
 
 				if (!firstPacket)
 					clientReceive();
@@ -949,7 +958,40 @@ public class ConnectionManagerESim extends Thread {
 		}// end else if
 
 		else if (requestType == Request.WRITE) { // this is a write request
-			if (packetType == 3) { // DATA packet being duplicated from the client 
+			// check to see if the which packet is the one being duplicated
+			if (packetType == 2) { // WRQ packet is being duplicated
+				if (debug || verbose) {
+					System.out.println("ConnectionManagerESim: WRQ packet will be duplicated. Sending first packet");
+				}// end if
+				serverSend();
+				if(debug || verbose)
+					System.out.println("ConnectionManagerESim: Thread will sleep now");
+				try {
+					Thread.sleep(delay);	//delays the packet for the specified amount
+				}// end  try
+				catch (InterruptedException e) { } // end catch
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms");
+				serverSend();
+				if (errorReceived)
+					return true;
+				serverReceive();
+
+				clientSend();
+
+				// switch back to normal operation
+				mode = 0;
+
+				firstPacket = false;
+				return false;
+			}// end if
+			else if (packetType == 1) { // delay a RRQ packet which will never happen
+				if (debug || verbose) 
+					System.out.println("ConnectionManagerESim: It is a write request, and a RRQ is requested to duplicate. This will never happen. Changing back to normal mode");
+				mode = 0;
+				return false;
+			} // end else if
+			else if (packetType == 3) { // DATA packet being duplicated from the client 
 				if (!firstPacket)
 					clientReceive();
 				firstPacket = false;
