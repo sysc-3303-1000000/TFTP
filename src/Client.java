@@ -93,7 +93,13 @@ public class Client extends Thread {
 	private void sendReceive(Request req)
 	{		
 		System.out.println("Client has started...");
-
+		if (req == Request.WRITE) {
+			File file = new File(directory, filenameString);
+			if (!file.exists()) {
+				System.out.println("The file you specified to write to the server doesn't not exist, please check the name of the file and directory you specified and try again");
+				return;
+			}
+		}
 		// send the packet to well-known port 68
 		try {
 			sendPacket = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), socket);
