@@ -204,8 +204,8 @@ public class ConnectionManager extends Thread {
 					return;
 				}
 				blockNum = 0;
-				blockNum += (data[2]) * 256;
-				blockNum += data[3];
+				blockNum += (data[2] & 0xFF) * 256;
+				blockNum += (data[3] & 0xFF);
 				if(blockNum != prevBlockNum && blockNum != prevBlockNum+1){
 					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process, client thread is exiting").getBytes();
 					try {
@@ -460,8 +460,8 @@ public class ConnectionManager extends Thread {
 				printInformation(receivedPacket);
 
 				blockNum = 0;
-				blockNum += (data[2]) * 256;
-				blockNum += data[3];
+				blockNum += (data[2] & 0xFF) * 256;
+				blockNum += (data[3] & 0xFF);
 				blockNum++;
 				
 				if(!resend && blockNum == prevBlockNum){		
