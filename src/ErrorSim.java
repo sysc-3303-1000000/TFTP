@@ -51,9 +51,10 @@ public class ErrorSim {
 	private static int userChoice;
 	
 
-	public ErrorSim() {	
+	@SuppressWarnings("static-access")
+	public ErrorSim(int output) {	
 		data = new byte[DATA_SIZE];
-		output = 2; // initialize the level of output to medium by default
+		this.output = output; // initialize the level of output to medium by default
 		// initialize the DatagramSocket receiveSocket to bind to well-known port 68
 		try {
 			receiveSocket = new DatagramSocket(2068);
@@ -255,7 +256,6 @@ public class ErrorSim {
 		catch (IOException ie) {
 			System.err.println("IOException error: " + ie.getMessage());
 		} // end catch
-
 		Thread connectionmanager = new ConnectionManagerESim(output, userChoice, delayAmount, packetType, packetNumber, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
 		connectionmanager.start();
 
@@ -279,7 +279,7 @@ public class ErrorSim {
 	private Request verifyReadWrite(DatagramPacket p) {
 		Request r;
 		if(p.getData()[0] != (byte)0)
-			System.exit(1); // TODO properly handle error
+			System.exit(1);
 		if(p.getData()[1] == (byte)1)
 		{
 			r = Request.READ;
@@ -354,7 +354,7 @@ public class ErrorSim {
 			if (userChoice == 9) {
 				shutdown = true;
 			}
-			ErrorSim esim = new ErrorSim();
+			ErrorSim esim = new ErrorSim(output);
 			
 			esim.sendReceive();
 			validChoice = false;
