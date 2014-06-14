@@ -141,7 +141,7 @@ public class ConnectionManagerESim extends Thread {
 			System.out.println("Length of packet: " + p.getLength());
 			System.out.println("Bytes: ");
 			for (int i = 0; i < p.getLength(); i++) {
-				System.out.print(Integer.toHexString(p.getData()[i]));
+				System.out.print(p.getData()[i]);
 			} // end forloop
 			System.out.println("\n******************************************************");
 			System.out.println("\n");
