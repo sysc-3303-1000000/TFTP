@@ -131,7 +131,7 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 */
 	private void printInformation(DatagramPacket p) {
-
+		int blockNum = (p.getData()[3] & 0xFF) + 256*(p.getData()[2] & 0xFF);
 		if (debug) { // print all information
 			// print out the information on the packet
 			System.out.println("PACKET INFORMATION:");
@@ -143,14 +143,16 @@ public class ConnectionManagerESim extends Thread {
 			for (int i = 0; i < p.getLength(); i++) {
 				System.out.print(p.getData()[i]);
 			} // end forloop
+			System.out.println("\nBlock Number: " + blockNum);
 			System.out.println("\n******************************************************");
 			System.out.println("\n");
+			
 		}
 		else if (verbose) { // print only relevant information
 			// print out the information on the packet
 			System.out.println("Length of packet: " + p.getLength());
 			System.out.println("Packet Type: " + p.getData()[0] + p.getData()[1]);
-			System.out.println("Block Number: " + p.getData()[2] + p.getData()[3]);
+			System.out.println("Block Number: " + blockNum);
 		}
 		else if (silent){
 		}
