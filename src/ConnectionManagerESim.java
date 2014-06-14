@@ -1142,9 +1142,9 @@ public class ConnectionManagerESim extends Thread {
 	 * User will be able to specify which packet to corrupt and how it is corrupted
 	 * @since June 4 2014
 	 * 
-	 * @version June 4 2014
+	 * Latest Change: Updated output and changed behaviour to work with an error
+	 * @version June 13 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong  
-	 * @param x is the position of the corruption
 	 */
 	private boolean corruptOp()
 	{
@@ -1305,13 +1305,13 @@ public class ConnectionManagerESim extends Thread {
 	 * The server must ensure that the packet has a valid file mode: netascii or octet
 	 * If not, they must send error code 04 to the other party and shuts down
 	 * @since June 11 2014
-	 * Latest Change: Added method to handle file mode
-	 * @version June 11 2014
+	 * Latest Change: Updated output
+	 * @version June 13 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
 	 */
 	private boolean corruptMode() {
 		if (packetType == 1 || packetType == 2){ // corrupting the appropriate request for a file mode
-			if (debug)
+			if (debug || verbose)
 				System.out.println("ConnectionManagerESim: corrupting File Mode in request");			
 
 			int count = 0;
@@ -1327,14 +1327,18 @@ public class ConnectionManagerESim extends Thread {
 			}// end for
 			clientData[index+1] = (byte)48;
 
-			if (debug)
+			if (debug || verbose)
 				System.out.println("ConnectionManagerESim: simulating a corrupted request packet");
 			// send server invalid file mode	
 			serverSend();
+			if (errorReceived)	
+				return true;	// Last packet is now sent. The thread will close
 			// receive error packet from server
 			serverReceive();
 			// send error to client
 			clientSend();
+			if (errorReceived)	
+				return true;	// Last packet is now sent. The thread will close
 			return true; 
 		}
 		mode = 0;
@@ -1346,8 +1350,8 @@ public class ConnectionManagerESim extends Thread {
 	 * The client and server must ensure that the packet is coming from the expected source
 	 * If not, they must send error code 05 to the other party and continue working 
 	 * @since June 5 2014
-	 * Latest Change: Fixed to ensure proper end in our method
-	 * @version June 11 2014
+	 * Latest Change: Fixed to ensure proper end in our method and output fixes
+	 * @version June 13 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
 	 */
 	private boolean invalidTID(){
@@ -1355,8 +1359,8 @@ public class ConnectionManagerESim extends Thread {
 		if (requestType == Request.READ){ // this is a read request
 			// ************* ACK PACKET ***************
 			if (packetType == 4){ // check to corrupt TID for ACK packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to corrupt TID of ACK packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid TID of ACK packet");
 				if (!lastPacketRead) {
 
 					if (!firstPacket) {
@@ -1367,7 +1371,7 @@ public class ConnectionManagerESim extends Thread {
 					// check to see if this is the packet that we want to corrupt
 					if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
 						if (debug) {
-							System.out.println("ConnectionManagerESim: simulating a corrupt TID client ACK packet");
+							System.out.println("ConnectionManagerESim: simulating an invalid TID client ACK packet");
 							printInformation(receiveClientPacket);
 						}// end if
 						// corrupt the packet being sent to the server
@@ -1378,7 +1382,7 @@ public class ConnectionManagerESim extends Thread {
 
 					else { // this is not the packet we want to corrupt, send to server
 						serverSend();
-						if (lastPacketRead)	
+						if (errorReceived || lastPacketRead)	
 							return true;	// Last packet is now sent. The thread will close
 					}//end else
 
@@ -1387,6 +1391,8 @@ public class ConnectionManagerESim extends Thread {
 
 					//send to the client
 					clientSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					//check to see if this is the last packet (DATA < 512b 
 					if(sendClientPacket.getLength() < DATA_SIZE) {
 						lastPacketRead = true;
@@ -1400,8 +1406,8 @@ public class ConnectionManagerESim extends Thread {
 					clientReceive();
 					// check to see if this is the packet that we want to corrupt
 					if (foundPacket(receiveClientPacket)) { // this is the packet we want to corrupt
-						if (debug) {
-							System.out.println("ConnectionManagerESim: simulating a corrupt TID client ACK packet");
+						if (debug || verbose) {
+							System.out.println("ConnectionManagerESim: simulating an invalid TID client ACK packet");
 							printInformation(receiveClientPacket);
 						}// end if
 						// corrupt the packet being sent to the server
@@ -1419,8 +1425,8 @@ public class ConnectionManagerESim extends Thread {
 
 			// ************* DATA PACKET ***************
 			else if (packetType == 3){ // check to lose a DATA packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to corrupt TID for a DATA packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid TID for a DATA packet");
 				if (!firstPacket) {
 					// receive from client
 					clientReceive();
@@ -1428,14 +1434,14 @@ public class ConnectionManagerESim extends Thread {
 				firstPacket = false; // this is no longer the first packet
 
 				serverSend();
-				if (lastPacketRead)	
+				if (errorReceived || lastPacketRead)	
 					return true;	// Last packet is now sent. The thread will close
 				// we need to wait on a server packet
 				serverReceive();
 				// check to see if this is the packet that we want to corrupt
 				if (foundPacket(receiveServerPacket)) { // this is the packet we want to corrupt
 					if (debug) {
-						System.out.println("ConnectionManagerESim: simulating a corrupt TID server DATA packet");
+						System.out.println("ConnectionManagerESim: simulating an invalid TID server DATA packet");
 						printInformation(receiveServerPacket);
 					}// end if
 					// corrupt the packet being sent to the server
@@ -1447,6 +1453,8 @@ public class ConnectionManagerESim extends Thread {
 
 				//send to the client
 				clientSend();
+				if (errorReceived)	
+					return true;	// Last packet is now sent. The thread will close
 				//check to see if this is the last packet (DATA < 512b 
 				if(sendClientPacket.getLength() < DATA_SIZE) {
 					lastPacketRead = true;
@@ -1459,13 +1467,17 @@ public class ConnectionManagerESim extends Thread {
 		else if (requestType == Request.WRITE){ // this is a write request
 			// ************* ACK PACKET ***************
 			if (packetType == 4){ // check to lose a ACK packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to lose ACK packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid ACK packet");
 				if (firstPacket) { // if this is the first packet
 					serverSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					serverReceive();
 					firstPacket = false; // this is no longer the first packet
 					clientSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					return false;
 				}// end if		
 				clientReceive();
@@ -1475,13 +1487,14 @@ public class ConnectionManagerESim extends Thread {
 				}
 
 				serverSend();
-
+				if (errorReceived)	
+					return true;	// Last packet is now sent. The thread will close
 				// we need to wait on a server packet
 				serverReceive();
 				// check to see if this is the packet that we want to corrupt
 				if (foundPacket(receiveServerPacket)) { // this is the packet we want to corrupt
 					if (debug) {
-						System.out.println("ConnectionManagerESim: simulating a corrupt TID server ACK packet");
+						System.out.println("ConnectionManagerESim: simulating an invalid TID server ACK packet");
 						printInformation(receiveServerPacket);
 					}// end if
 					// corrupt the packet being sent to the server
@@ -1503,7 +1516,7 @@ public class ConnectionManagerESim extends Thread {
 				//send to the client
 				clientSend();
 				// we just sent the last ACK packet to the client, we are done.
-				if (lastPacketWrite)
+				if (errorReceived || lastPacketWrite)
 					return true;
 				else
 					return false;
@@ -1511,8 +1524,8 @@ public class ConnectionManagerESim extends Thread {
 
 			// ************* DATA PACKET ***************
 			else if (packetType == 3){ // check to corrupt a DATA packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to lose a DATA packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid TID DATA packet");
 
 				if (!firstPacket) {
 					// receive from client
@@ -1521,14 +1534,16 @@ public class ConnectionManagerESim extends Thread {
 
 				// check to see if this is the packet that we want to corrupt
 				if (foundPacket(receiveClientPacket)) { // this is the packet we want to corrupt
-					if (debug) {
-						System.out.println("ConnectionManagerESim: simulating a corrupt TID client DATA packet");
+					if (debug || verbose) {
+						System.out.println("ConnectionManagerESim: simulating an invalid TID client DATA packet");
 						printInformation(receiveClientPacket);
 					}// end if
 					// corrupt the packet being sent to the server
 					corruptPortServer();
 					clientReceive();
 					serverSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					if (sendServerPacket.getLength() < DATA_SIZE && !firstPacket) {
 						lastPacketWrite = true;
 						trueLastPacket[0] = sendServerPacket.getData()[2];
@@ -1551,7 +1566,7 @@ public class ConnectionManagerESim extends Thread {
 
 				//send to the client
 				clientSend();
-				if (lastPacketWrite)
+				if (errorReceived || lastPacketWrite)
 					return true;	// Last packet is now sent. The thread will close
 				firstPacket = false; // this is no longer the first packet
 				return false;					
