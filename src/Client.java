@@ -174,7 +174,7 @@ public class Client extends Thread {
 					byte emsg[] = ("The last TFTP packet received was an ACK packet when it should have been a DATA packet during a read request, client thread is exiting.").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -190,7 +190,7 @@ public class Client extends Thread {
 					byte emsg[] = ("Client has received an unidentified packet type during a read request, client thread is exiting.").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -206,7 +206,7 @@ public class Client extends Thread {
 					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process for a read request, client thread is exiting").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -222,7 +222,7 @@ public class Client extends Thread {
 					byte emsg[] = ("The data packet client received has an invalid size, client thread terminating").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -240,10 +240,10 @@ public class Client extends Thread {
 						WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));// make sure if we receive a duplicate data packet, we only write the first one
 					} // end try
 					catch (FileNotFoundException e) { // respond with error packet 0502_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one, client thread exiting.").getBytes();
+						byte emsg[] = ("The file: " + filenameString + " could not be written in the following path: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one, client thread exiting.").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(two, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 2 with message: " + emsg.toString());
+							System.out.println("Client sent error packet 2 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -254,10 +254,10 @@ public class Client extends Thread {
 						return;
 					} // end catch
 					catch (IOException e) { // respond with error packet 0503_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again, client thread exiting.").getBytes();
+						byte emsg[] = ("The file: " + filenameString + "could not be written in the following path: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again, client thread exiting.").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(three, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 3 with message: "+ emsg.toString());
+							System.out.println("Client sent error packet 3 with message: "+ new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -338,7 +338,7 @@ public class Client extends Thread {
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 5 with message: " + emsg.toString());
+							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -379,7 +379,7 @@ public class Client extends Thread {
 					byte emsg[] = ("The last TFTP packet received was a DATA packet when it should have been an ACK packet during a write request, client thread is exiting").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -395,7 +395,7 @@ public class Client extends Thread {
 					byte emsg[] = ("Client has received an unidentified packet type during a write request, client thread is exiting").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -411,7 +411,7 @@ public class Client extends Thread {
 					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process during a write request, client thread is exiting").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -427,7 +427,7 @@ public class Client extends Thread {
 					byte emsg[] = ("The ack packet client received has an invalid size, which should not be, client thread terminating").getBytes();
 					try {
 						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4 with message: " + emsg.toString());
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -447,10 +447,10 @@ public class Client extends Thread {
 						fileData = ReadFromFile(blockNum); // read a block of data from a file
 					} // end try
 					catch (FileNotFoundException e) { // respond with error packet 0501_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again. Also ensure you have read permissions for the file and directory").getBytes();
+						byte emsg[] = ("The full path you specified: " +  directory + " does not contain the file you specified. Please ensure that you are specifying the correct filename and the correct directory name and try again. Also ensure you have read permissions for the file and directory").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sending error packet 1 with message: " + emsg.toString());
+							System.out.println("Client sending error packet 1 with message: " + new String(emsg));
 						} // end try 
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -538,7 +538,7 @@ public class Client extends Thread {
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 5 with message: " + emsg.toString());
+							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
