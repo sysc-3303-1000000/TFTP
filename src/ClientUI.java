@@ -1,4 +1,5 @@
 import java.io.*;
+import java.net.InetAddress;
 /**
  * The following is implementation for the Client User Interface
  * 
@@ -29,6 +30,8 @@ public class ClientUI {
 		String filename = null;
 		int rw = 0;
 		int socket = 0;
+		int localOrNot = 0;
+		InetAddress IP = null;
 		do {
 			try {
 				System.out.println("Would you like to run in normal mode or error simulator mode? (1 - normal, 2 - error simulator)");
@@ -36,6 +39,24 @@ public class ClientUI {
 			} // end try
 			catch (NumberFormatException nfe) {} // end catch
 		} while (socket != 1 && socket != 2); // end dowhile
+		do {
+			try {
+				System.out.println("Would you like to specify an IP address or use the local IP? (1 - specify, 2 - use local)");
+				localOrNot = Integer.parseInt(br.readLine());
+			} // end try
+			catch (NumberFormatException nfe) {} // end catch
+		} while (localOrNot != 1 && localOrNot != 2); // end dowhile
+		
+		if (socket == 1 && localOrNot == 1) {
+			System.out.println("Enter the InetAddress of the Server. (i.e. Kais-PC/192.168.100.106)");
+			IP = InetAddress.getByName(br.readLine());
+			System.out.println(IP);
+		} // end if
+		else if (socket == 2 && localOrNot == 1) {
+			System.out.println("Enter the InetAddress of the Error Simulator. (i.e. Kais-PC/192.168.100.106)");
+			IP = InetAddress.getByName(br.readLine());
+			System.out.println(IP);
+		} // end if
 		do {
 			do {
 				try {
@@ -50,7 +71,7 @@ public class ClientUI {
 				filename = br.readLine();
 				System.out.println("Specify the full path of where you would like to save the file, including the filename (i.e. 'C:\\Users\\Kais\\git\\TFTP\\Test.txt')");
 				directory = br.readLine();
-				Thread client = new Client(filename, directory, Request.READ, (socket == 1) ? 69 : 2068); // server or error sim
+				Thread client = new Client(filename, directory, Request.READ, (socket == 1) ? 69 : 2068, (localOrNot == 1) ? IP : InetAddress.getLocalHost()); // server or error sim
 				client.start();
 				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
@@ -59,7 +80,7 @@ public class ClientUI {
 				filename = br.readLine();
 				System.out.println("Specify the full path of where the file is located. (i.e. 'C:\\Users\\Kais\\git\\TFTP\\Test.txt')");
 				directory = br.readLine();
-				Thread client = new Client(filename, directory, Request.WRITE, (socket == 1) ? 69 : 2068); // server or error sim
+				Thread client = new Client(filename, directory, Request.WRITE, (socket == 1) ? 69 : 2068, (localOrNot == 1) ? IP : InetAddress.getLocalHost()); // server or error sim
 				client.start();
 				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
