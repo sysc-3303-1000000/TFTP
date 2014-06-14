@@ -17,7 +17,7 @@ public class ServerUI {
 			} while(rw != 1 && rw != 2);
 			if (rw == 1){
 				System.out.println("Starting server...");
-				Server server = new Server(true);
+				Server server = new Server();
 				server.start();
 				do{
 					System.out.println("To stop server, type 1");

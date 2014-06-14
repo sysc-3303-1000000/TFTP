@@ -48,12 +48,12 @@ public class ClientUI {
 		} while (localOrNot != 1 && localOrNot != 2); // end dowhile
 		
 		if (socket == 1 && localOrNot == 1) {
-			System.out.println("Enter the InetAddress of the Server. (i.e. Kais-PC/192.168.100.106)");
+			System.out.println("Enter the IP address of the Server. (i.e. 192.168.100.106)");
 			IP = InetAddress.getByName(br.readLine());
 			System.out.println(IP);
 		} // end if
 		else if (socket == 2 && localOrNot == 1) {
-			System.out.println("Enter the InetAddress of the Error Simulator. (i.e. Kais-PC/192.168.100.106)");
+			System.out.println("Enter the IP address of the Error Simulator. (i.e. 192.168.100.106)");
 			IP = InetAddress.getByName(br.readLine());
 			System.out.println(IP);
 		} // end if
