@@ -18,8 +18,8 @@ public class ClientUI {
 	 * 
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: added prompt for user to select if they would to run in normal mode for the duration of requests or error sim mode
-	 * @version June 5 2014
+	 * Latest Change: Added so that you can specify an IP, and have the option to change upon every request or leave it the same
+	 * @version June 14 2014
 	 * @author Kais
 	 * 
 	 */
@@ -32,6 +32,7 @@ public class ClientUI {
 		int socket = 0;
 		int localOrNot = 0;
 		InetAddress IP = null;
+		int setAgain = 1;
 		do {
 			try {
 				System.out.println("Would you like to run in normal mode or error simulator mode? (1 - normal, 2 - error simulator)");
@@ -40,22 +41,34 @@ public class ClientUI {
 			catch (NumberFormatException nfe) {} // end catch
 		} while (socket != 1 && socket != 2); // end dowhile
 		do {
-			try {
-				System.out.println("Would you like to specify an IP address or use the local IP? (1 - specify, 2 - use local)"); // use local for now
-				localOrNot = Integer.parseInt(br.readLine());
-			} // end try
-			catch (NumberFormatException nfe) {} // end catch
-		} while (localOrNot != 1 && localOrNot != 2); // end dowhile
-		
-		if (socket == 1 && localOrNot == 1) {
-			System.out.println("Enter the IP address of the Server. (i.e. 192.168.100.106)");
-			IP = InetAddress.getByName(br.readLine());
-		} // end if
-		else if (socket == 2 && localOrNot == 1) {
-			System.out.println("Enter the IP address of the Error Simulator. (i.e. 192.168.100.106)");
-			IP = InetAddress.getByName(br.readLine());
-		} // end if
-		do {
+			if (rw != 0) {
+				do {
+					try {
+						System.out.println("Would you like to change the IP address for this next operation? (Current IP is: " + IP + ") (1 - yes, 2 - no)"); // use local for now
+						setAgain = Integer.parseInt(br.readLine());
+					} // end try
+					catch (NumberFormatException nfe) {} // end catch
+				} while (setAgain != 1 && setAgain != 2); // end dowhile
+			}
+			if (setAgain == 1) {
+				do {
+					try {
+						System.out.println("Would you like to specify an IP address or use the local IP? (1 - specify, 2 - use local)"); // use local for now
+						localOrNot = Integer.parseInt(br.readLine());
+					} // end try
+					catch (NumberFormatException nfe) {} // end catch
+				} while (localOrNot != 1 && localOrNot != 2); // end dowhile
+
+				if (socket == 1 && localOrNot == 1) {
+					System.out.println("Enter the IP address of the Server. (i.e. 192.168.100.106)");
+					IP = InetAddress.getByName(br.readLine());
+				} // end if
+				else if (socket == 2 && localOrNot == 1) {
+					System.out.println("Enter the IP address of the Error Simulator. (i.e. 192.168.100.106)");
+					IP = InetAddress.getByName(br.readLine());
+				} // end if
+				setAgain = 2;
+			}
 			do {
 				try {
 					System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
