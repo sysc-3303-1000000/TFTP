@@ -127,7 +127,7 @@ public class ConnectionManager extends Thread {
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
-					if(worked && (receivedPacket.getPort() != TiD || receivedPacket.getAddress() != address)){
+					if(worked && (receivedPacket.getPort() != TiD || !receivedPacket.getAddress().equals(address))){
 						byte emsg[] = ("The Server thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
 						try {
 							send.send(new DatagramPacket(createErrorMessage((byte)5, emsg), 5 + emsg.length, address, receivedPacket.getPort()));
@@ -338,7 +338,8 @@ public class ConnectionManager extends Thread {
 						System.out.println("Server has timed out 5 times waiting for the next data packet from client");
 						return;
 					}
-					if(worked && (receivedPacket.getPort() != TiD || receivedPacket.getAddress() != address)){
+					if(worked && (receivedPacket.getPort() != TiD || !receivedPacket.getAddress().equals(address))){
+						System.out.println("Address: " + address + " received: " + receivedPacket.getAddress() + " port: " + port + " received: " + receivedPacket.getPort());
 						byte emsg[] = ("The Server thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
 						try {
 							send.send(new DatagramPacket(createErrorMessage((byte)5, emsg), 5 + emsg.length, receivedPacket.getAddress(), receivedPacket.getPort()));

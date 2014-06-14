@@ -327,7 +327,7 @@ public class Client extends Thread {
 						return;
 					} // end if
 					
-					if ((receivePacket.getPort() != threadPort || receivePacket.getAddress() != threadAddress) && worked) { // if we receive a packet from a different TID
+					if ((receivePacket.getPort() != threadPort || !receivePacket.getAddress().equals(threadAddress)) && worked) { // if we receive a packet from a different TID
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));
@@ -522,7 +522,7 @@ public class Client extends Thread {
 						System.out.println("We got an incorrect packet as our last packet for write, but connection has been dropped due to sending last data packet, so not sending error packet 4.");
 					} // end if
 					
-					if ((receivePacket.getPort() != threadPort || receivePacket.getAddress() != threadAddress) && worked) { // handle receiving from the wrong TID
+					if ((receivePacket.getPort() != threadPort || !receivePacket.getAddress().equals(threadAddress)) && worked) { // handle receiving from the wrong TID
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));

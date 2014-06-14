@@ -50,12 +50,10 @@ public class ClientUI {
 		if (socket == 1 && localOrNot == 1) {
 			System.out.println("Enter the IP address of the Server. (i.e. 192.168.100.106)");
 			IP = InetAddress.getByName(br.readLine());
-			System.out.println(IP);
 		} // end if
 		else if (socket == 2 && localOrNot == 1) {
 			System.out.println("Enter the IP address of the Error Simulator. (i.e. 192.168.100.106)");
 			IP = InetAddress.getByName(br.readLine());
-			System.out.println(IP);
 		} // end if
 		do {
 			do {
