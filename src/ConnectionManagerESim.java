@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 
 /**
  * The following is implementation for the ConnectionManagerESim which will form
@@ -42,6 +43,7 @@ public class ConnectionManagerESim extends Thread {
 	private byte serverData[] = new byte[DATA_SIZE]; // this will store the response from the server
 	private byte trueLastPacket[] = new byte[2]; // will store the block number of the truly last packet to verify if we have received it or not
 	private byte errorCode[] = new byte[2]; // will store the error code number (if applicable)
+	private byte errorMsg[]; // will store the error message
 	/**
 	 * The following is the constructor for ListenerESim
 	 * @param output determines the level of output we want to display
@@ -218,6 +220,7 @@ public class ConnectionManagerESim extends Thread {
 		// begin closing operations
 		if (errorReceived) { // if an error was received, print out the error code and its message
 			System.out.println("ConnectionManagerESim: Shutting down due to an error code: " + errorCode[0] + errorCode[1]);
+			printErrorMsg(errorMsg, errorMsg.length);
 		}// end if
 		else if (mode == 0 && (debug || verbose))
 			System.out.println("ConnectionManagerESim: Successful transfer!");
@@ -1601,6 +1604,7 @@ public class ConnectionManagerESim extends Thread {
 			errorReceived = true;
 			errorCode[0] = receiveClientPacket.getData()[2];
 			errorCode[1] = receiveClientPacket.getData()[3];
+			errorMsg = receiveClientPacket.getData();
 		} // end if
 		if (debug) {
 			System.out.println("ConnectionManagerESim: Received packet from client");
@@ -1678,6 +1682,7 @@ public class ConnectionManagerESim extends Thread {
 			errorReceived = true;
 			errorCode[0] = receiveServerPacket.getData()[2];
 			errorCode[1] = receiveServerPacket.getData()[3];
+			errorMsg = receiveClientPacket.getData();
 		}
 		serverData = receiveServerPacket.getData();
 		serverLength = receiveServerPacket.getLength();
@@ -1984,4 +1989,19 @@ public class ConnectionManagerESim extends Thread {
 		}
 		corruptSocket.close();
 	}
+
+	/**
+	 * Following method will print the error message from an error packet
+	 * @param errorMsg the byte array containing the entirety of the message from the error packet
+	 * @param length the length of the error message
+	 * 
+	 * @since May 30 2014
+	 * 
+	 * Latest Change: Encorporated this method into the ErrorSim
+	 * @version June 14 2014
+	 * @author Kais
+	 */
+	private void printErrorMsg(byte[] errorMsg, int length) {
+		System.out.println("ConnectionManagerESim: Error Message: " + new String(Arrays.copyOfRange(errorMsg, 4, length - 1)));
+	} // end method
 } // end class
