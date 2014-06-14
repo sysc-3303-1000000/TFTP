@@ -8,11 +8,12 @@ import java.util.*;
  * @since May 11 2014
  * 
  * @author 1000000
- * @version June 6 2014
+ * @version June 14 2014
  *
  */
 public class Client extends Thread {
-	public static final int DATA_SIZE = 517;
+	/* Some constants defined in order to make better looking code */
+	public static final int DATA_SIZE = 517; // one plus the maximum we can handle to see if we have received extra data
 	public static final byte zero = (byte)0;
 	public static final byte one = (byte)1;
 	public static final byte two = (byte)2;
@@ -23,17 +24,14 @@ public class Client extends Thread {
 
 	private DatagramSocket sendReceiveSocket; // Socket used to send and receive packets
 	private DatagramPacket sendPacket, receivePacket, sendData; // Packets used to send an receive information
-	private String filenameString, modeString; // filename will be user input, while mode will remain hardcoded for now
-	private String directory;
-	private byte filenameBytes[], modeBytes[];
+	private String filenameString, modeString, directory; // filename will be user input, while mode will remain hardcoded for now, directory contains where the user entered for the file
+	private byte filenameBytes[], modeBytes[], message[];
 	private byte[] ackNumber = new byte[2];
 	private byte[] dataNumber = new byte[2];
-	private int blockNum, ackNum; // the current datablock number and ack block number
+	private int blockNum, socket, threadPort; // the current datablock number and ack block number
 	private boolean endFile = false; // indicates if we have reached the last DATA block
-	private byte message[];
-	private Request req;
-	private int socket;
-	private int threadPort; // keep track of the port we have been communicating with for the entirety of the transfer
+	private Request req; // store the type of request
+	private InetAddress address, threadAddress; // address of server, address of thread we are dealing with it
 
 	/**
 	 * The following is the constructor for the Client
@@ -41,20 +39,22 @@ public class Client extends Thread {
 	 * @param path the path of the file we are going to write to on our side or the path to place the file we are reading from the server
 	 * @param req whether it is a read or write request
 	 * @param socket set to either the server or error sim socket depending on user input
+	 * @param address the InetAddress of the server or error sim
 	 * 
 	 * @since May 22 2014
 	 * 
-	 * Latest Change: Added param socket so we can run in normal mode or error sim mode
-	 * @version June 5 2014
+	 * Latest Change: Added parameter of InetAddress to handle remote server
+	 * @version June 14 2014
 	 * @author Kais
 	 * 
 	 */
-	public Client(String filename, String path, Request req, int socket) {
+	public Client(String filename, String path, Request req, int socket, InetAddress address) {
 
 		directory = path;
 		filenameString = filename;
 		this.req = req;
 		this.socket = socket; // server or error sim port
+		this.address = address;
 
 		// initialize the DatagramSocket sendReceive to bind to any available port
 		try {
@@ -85,25 +85,27 @@ public class Client extends Thread {
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Added functionality to handle error packet 4 and 5
-	 * @version June 6 2014
+	 * Latest Change: Changed so we no longer to localhost for address, changed way error packet 5 was being handled
+	 * @version June 14 2014
 	 * @author Kais
 	 * 
 	 */
 	private void sendReceive(Request req)
-	{		
-		System.out.println("Client has started...");
+	{
+		/* Following if statement block will check to see if the file we wish to write upon write request exists where the user specified, if not we stop */
+		if (req == Request.WRITE) {
+			File file = new File(directory);
+			if (!file.exists()) {
+				System.out.println("The file you specified to write to the server doesn't not exist, please check the name of the file and directory you specified and try again");
+				return;
+			} // end if
+		} // end if
+		
+		sendPacket = new DatagramPacket(message, message.length, address, socket);
 
-		// send the packet to well-known port 68
-		try {
-			sendPacket = new DatagramPacket(message, message.length, InetAddress.getLocalHost(), socket);
-		} // end try
-		catch (UnknownHostException uhe) {
-			System.err.println("Unknown host exception error: " + uhe.getMessage());
-		} // end catch
-
-		System.out.println("Client sending packet to intermediate...");
-		// send the packet to the intermediate via the send socket 
+		System.out.println("Client sending " + req.toString() + " request to server");
+		
+		// send the packet to the error simulator or server via the send socket 
 		try {
 			sendReceiveSocket.send(sendPacket);
 		} // end try
@@ -112,8 +114,7 @@ public class Client extends Thread {
 		} // end catch
 
 		// prints out the information on the sent packet
-		System.out.println("Client packet sent to intermediate...");
-		printInformation(sendPacket);
+		System.out.println("Client sent " + req.toString() + " request to server");
 
 
 		// prepare to receive a packet
@@ -121,52 +122,57 @@ public class Client extends Thread {
 		receivePacket = new DatagramPacket(rply, rply.length);
 
 		// block until you receive a packet
-		boolean worked = false;
-		int numberOfTimeouts = 0;
+		boolean worked = false; // set to false since receiving a packet hasn't worked yet
+		int numberOfTimeouts = 0; // no timeouts have occurred yet
 		while (!worked) {
+			
 			try {
-				worked = true;
-				System.out.println("Client receiving packet from intermediate...");
-				sendReceiveSocket.setSoTimeout(TIMEOUT);
+				worked = true; // set worked to true, will be set back to false in cases where we didn't receive a packet
+				System.out.println("Client receiving packet from server");
+				sendReceiveSocket.setSoTimeout(TIMEOUT); // set how long we wait to receive a packet before giving up
 				sendReceiveSocket.receive(receivePacket);
 			} // end try
 			catch (SocketTimeoutException ste) {
 				numberOfTimeouts++;
-				worked = false;
+				worked = false; // did not work
 			} // end catch
 			catch (IOException ioe) {
 				System.err.println("IO Exception error: " + ioe.getMessage());
-				worked = false;
-
+				worked = false; // did not work
 			} // end catch
-			if (numberOfTimeouts == 5) {
-				System.out.println("Client has timed out 5 times waiting for the first packet back from server");
+			
+			if (numberOfTimeouts == 5) { // we give up after timing out 5 times
+				System.out.println("Client has timed out 5 times waiting for the first packet back from server, assuming the server is dead and exiting.");
 				return;
 			} // end if
+			
 		} // end whileloop
-		if (receivePacket.getData()[1] == five) {
+		
+		System.out.println("Client has received a packet from server");
+		
+		/* Handle receiving an error packet */
+		if (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five) {
 			printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 			return;
 		} // end if
-		// prints out the information on the received packet
-		printInformation(receivePacket);
-		System.out.println("Client packet received..");
-		System.out.println(req);
+		
 		threadPort = receivePacket.getPort();
+		threadAddress = receivePacket.getAddress();
 		if (req == Request.READ) { // if request was a read
-			System.out.println("In Read");
 			byte dat[] = receivePacket.getData();
 			byte ack[] = new byte[4];
 			dataNumber[0] = (byte)0;
 			dataNumber[1] = (byte)1;
 			blockNum = 1;
-			ackNum = 1;
+			
 			while(true) {
+				
+				/* Handle receiving a DATA packet instead of an ACK packet */
 				if (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == four) {
-					byte emsg[] = ("The last TFTP packet received was an ACK packet when it should have been a DATA packet, client thread is exiting").getBytes();
+					byte emsg[] = ("The last TFTP packet received was an ACK packet when it should have been a DATA packet during a read request, client thread is exiting.").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -176,11 +182,13 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
+				
+				/* Handle receiving a packet which is not a DATA, ACK, or ERROR */
 				else if (receivePacket.getData()[0] != zero || receivePacket.getData()[1] != three) {
-					byte emsg[] = ("Client has received an unidentified packet type, client thread is exiting").getBytes();
+					byte emsg[] = ("Client has received an unidentified packet type during a read request, client thread is exiting.").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -189,12 +197,14 @@ public class Client extends Thread {
 						System.err.println("IO Exception: " + e1.toString());
 					} // end catch
 					return;
-				}
+				} // end if
+				
+				/* Handle receiving a block number that doesn't make sense at this point in the operation */
 				if ((receivePacket.getData()[2] != dataNumber[0] && receivePacket.getData()[2] != dataNumber[0] - one) || (receivePacket.getData()[3] != dataNumber[1] && receivePacket.getData()[3] != dataNumber[1] - one)) {
-					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process, client thread is exiting").getBytes();
+					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process for a read request, client thread is exiting").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -204,11 +214,13 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				if (receivePacket.getLength() > 516) {
-					byte emsg[] = ("The data packet client received is greater than 516 bytes, which should not be, client thread terminating").getBytes();
+				
+				/* Handle receiving a packet with an invalid size  */
+				if (receivePacket.getLength() > 516 || receivePacket.getLength() < 4) {
+					byte emsg[] = ("The data packet client received has an invalid size, client thread terminating").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -218,15 +230,18 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
+				
+				/* Check to see if the block number matches up */
 				if (verifydata(dataNumber, receivePacket)) {
+					System.out.println("Client has received DATA packet " + blockNum + " from the server.");
 					try {
 						WriteToFile(blockNum, Arrays.copyOfRange(dat, 4, receivePacket.getLength()));// make sure if we receive a duplicate data packet, we only write the first one
 					} // end try
 					catch (FileNotFoundException e) { // respond with error packet 0502_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one.").getBytes();
+						byte emsg[] = ("The file: " + filenameString + " could not be written in the following path: " + directory + ". Please ensure that you have write permission to the directory you specified, and check to see if the directory you specified is the correct one, client thread exiting.").getBytes();
 						try {
-							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(two, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 2");
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(two, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+							System.out.println("Client sent error packet 2 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -237,10 +252,10 @@ public class Client extends Thread {
 						return;
 					} // end catch
 					catch (IOException e) { // respond with error packet 0503_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be written in the following directory: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again.").getBytes();
+						byte emsg[] = ("The file: " + filenameString + "could not be written in the following path: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again, client thread exiting.").getBytes();
 						try {
-							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(three, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 3");
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(three, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+							System.out.println("Client sent error packet 3 with message: "+ new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -251,25 +266,25 @@ public class Client extends Thread {
 						return;
 					} // end catch
 				} // end if
+				
 				else {
 					dataNumber[1]--;
 					if(dataNumber[1] == 255) {
 						dataNumber[0]--;
 					} // end if
-					ackNum--;
 					blockNum--;
 				} // end else
 
+				/* Set the acknowledge header */
 				ack[0] = (byte)0;
 				ack[1] = (byte)4;
-				ack[2] = (byte)((ackNum - (ackNum % 256))/256);
-				ack[3] = (byte)(ackNum % 256);
-				try {// create the acknowledge packet to send back to the client
-					sendData = new DatagramPacket(ack, 4, InetAddress.getLocalHost(), receivePacket.getPort());
-				} // end try
-				catch (UnknownHostException uhe) {
-					System.err.println("Unknown host exception error: " + uhe.getMessage());
-				} // end catch
+				ack[2] = (byte)((blockNum - (blockNum % 256))/256);
+				ack[3] = (byte)(blockNum % 256);
+				
+				sendData = new DatagramPacket(ack, 4, address, receivePacket.getPort());
+				
+				System.out.println("Client sending ACK packet "+ blockNum + " to the server.");
+				
 				worked = false;
 				numberOfTimeouts = 0;
 				try {
@@ -278,9 +293,10 @@ public class Client extends Thread {
 				catch (IOException ioe) {
 					System.err.println("Unknown IO exception error: " + ioe.getMessage());
 				} // end catch
-				System.out.println("Sent ack packet");
-				printInformation(sendData);
+				System.out.println("Client sent ACK packet "+ blockNum + " to the server.");
+				
 				if (receivePacket.getLength() < 516) {
+					System.out.println("Client has received last packet from the server during a read request");
 					break;
 				} // end if
 				byte rly[] = new byte[DATA_SIZE];
@@ -288,10 +304,9 @@ public class Client extends Thread {
 				while(!worked) {
 					try {
 						worked = true;
-						System.out.println("Client receiving packet from intermediate...");
+						System.out.println("Client receiving packet from server.");
 						sendReceiveSocket.setSoTimeout(TIMEOUT);
 						sendReceiveSocket.receive(receivePacket);
-						printInformation(receivePacket);
 					} // end try
 					catch (SocketTimeoutException ste) {
 						numberOfTimeouts++;
@@ -301,19 +316,22 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
-					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) {
+					
+					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) { // if we get an ERROR packet
 						printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 						return;
 					} // end if
-					if (numberOfTimeouts == 5) {
-						System.out.println("Client has timed out 5 times waiting for the next data packet from server");
+					
+					if (numberOfTimeouts == 5) { // if we timeout 5 times
+						System.out.println("Client has timed out 5 times waiting for the next data packet from server during a read request, server is assumed dead, client thread exiting.");
 						return;
 					} // end if
-					if (receivePacket.getPort() != threadPort && worked) {
-						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
+					
+					if ((receivePacket.getPort() != threadPort || receivePacket.getAddress() != threadAddress) && worked) { // if we receive a packet from a different TID
+						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
-							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 5");
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));
+							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -323,29 +341,38 @@ public class Client extends Thread {
 						} // end catch
 						worked = false;
 					} // end if
+					
 					if (worked) {
 						dat = rly; // new dat will be the data from the packet just received
 					} // end if
+					
 				} // end whileloop
+				
+				/* increment values required */
 				dataNumber[1]++;
 				if(dataNumber[1] == 0) {
 					dataNumber[0]++;
 				} // end if
-				ackNum++; // next ack
 				blockNum++; // next block
+				
 			} // end whileloop
+			
 		} // end if
+		
 		else if (req == Request.WRITE) { // if request was a write
+			
 			ackNumber[0] = (byte)0;
 			ackNumber[1] = (byte)0;
 			blockNum = 1;
-			ackNum = 0;
+			
 			while(true) {
+				
+				/* Handle what happens when we get a DATA packet instead of an ACK packet */
 				if (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == three) {
-					byte emsg[] = ("The last TFTP packet received was an DATA packet when it should have been a ACK packet, client thread is exiting").getBytes();
+					byte emsg[] = ("The last TFTP packet received was a DATA packet when it should have been an ACK packet during a write request, client thread is exiting").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -355,11 +382,13 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
+				
+				/* Handle what happens when packet isn't a DATA, ACK, or ERROR packet */
 				else if (receivePacket.getData()[0] != zero || receivePacket.getData()[1] != four) {
-					byte emsg[] = ("Client has received an unidentified packet type, client thread is exiting").getBytes();
+					byte emsg[] = ("Client has received an unidentified packet type during a write request, client thread is exiting").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -369,11 +398,13 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				}
+				
+				/* Handle receiving a block number that doesn't make sense at this point in the operation */
 				if ((receivePacket.getData()[2] != ackNumber[0] && receivePacket.getData()[2] != ackNumber[0] - one) || (receivePacket.getData()[3] != ackNumber[1] && receivePacket.getData()[3] != ackNumber[1] - one)) {
-					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process, client thread is exiting").getBytes();
+					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process during a write request, client thread is exiting").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -383,11 +414,13 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				if (receivePacket.getLength() > 4) {
-					byte emsg[] = ("The ack packet client received is greater than 4 bytes, which should not be, client thread terminating").getBytes();
+				
+				/* Handle what happens when we receive an ACK packet with an incorrect size */
+				if (receivePacket.getLength() > 4 || receivePacket.getLength() < 4) {
+					byte emsg[] = ("The ack packet client received has an invalid size, which should not be, client thread terminating").getBytes();
 					try {
-						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-						System.out.println("Client sent error packet 4");
+						sendReceiveSocket.send(new DatagramPacket(createErrorMsg(four, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+						System.out.println("Client sent error packet 4 with message: " + new String(emsg));
 					} // end try
 					catch (UnknownHostException e1) {
 						System.err.println("Unknown Host: " + e1.toString());
@@ -397,16 +430,20 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
+				
 				byte[] fileData = new byte[0];
+				
+				/* If we received the correct packet */
 				if (verifyack(ackNumber, receivePacket)) {
+					System.out.println("Client has received ACK packet " + blockNum + " from the server.");
 					try {
-						fileData = ReadFromFile(blockNum);
+						fileData = ReadFromFile(blockNum); // read a block of data from a file
 					} // end try
 					catch (FileNotFoundException e) { // respond with error packet 0501_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be located in the following directory: " + directory + ". Please ensure that you are specifying the correct filename and the correct directory name and try again. Also ensure you have read permissions for the file and directory").getBytes();
+						byte emsg[] = ("The full path you specified: " +  directory + " does not contain the file you specified. Please ensure that you are specifying the correct filename and the correct directory name and try again. Also ensure you have read permissions for the file and directory").getBytes();
 						try {
-							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sending error packet 1");
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(one, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+							System.out.println("Client sending error packet 1 with message: " + new String(emsg));
 						} // end try 
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -422,25 +459,21 @@ public class Client extends Thread {
 					} // end catch
 
 					byte data[] = new byte[4 + fileData.length];
+					/* Set the DATA packet header */
 					data[0] = (byte)0;
 					data[1] = (byte)3;
 					data[2] = (byte)((blockNum - (blockNum % 256))/256);
 					data[3] = (byte)(blockNum % 256);
 
-					if (fileData.length < 512) {
+					if (fileData.length < 512) { // if we read the last block
 						endFile = true;
 					} // end if
 
 					System.arraycopy(fileData, 0, data, 4, fileData.length);
-
-					try {
-						sendData = new DatagramPacket(data, fileData.length + 4, InetAddress.getLocalHost(), receivePacket.getPort());
-					} // end try
-					catch (UnknownHostException uhe) {
-						System.err.println("Unknown host exception error: " + uhe.getMessage());
-					} // end catch
-					System.out.println("created the following data packet to send off");
+					sendData = new DatagramPacket(data, fileData.length + 4, address, receivePacket.getPort());
 				} // end if
+				
+				/* We received the last packet again */
 				else {
 					ackNumber[1]--;
 					if(ackNumber[1] == 255) {
@@ -448,24 +481,27 @@ public class Client extends Thread {
 					}
 					blockNum--;
 				} // end else
+				
 				worked = false;
 				numberOfTimeouts = 0;
 
 				while(!worked) {
-					printInformation(sendData);
+					System.out.println("Client sending DATA packet " + blockNum + " to the server.");
 					try {
 						sendReceiveSocket.send(sendData);
 					} // end try
 					catch (IOException ioe) {
 						System.err.println("Unknown IO exception error: " + ioe.getMessage());
 					} // end catch
+					System.out.println("Client sent DATA packet " + blockNum + " to the server.");
+					
 					byte reply[] = new byte[DATA_SIZE];
 					receivePacket = new DatagramPacket(reply, reply.length);
 
 					try {
 						worked = true;
-						System.out.println("Client receiving packet from intermediate...");
-						sendReceiveSocket.setSoTimeout(TIMEOUT);
+						System.out.println("Client receiving packet from server.");
+						sendReceiveSocket.setSoTimeout(TIMEOUT); // give up after our timeout
 						sendReceiveSocket.receive(receivePacket);
 					} // end try
 					catch (SocketTimeoutException ste) {
@@ -476,18 +512,21 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
-					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) {
+					
+					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) { // handle ERROR packet being received
 						printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 						return;
 					} // end if
+					
 					if (worked && receivePacket.getLength() != 4 && endFile) {
 						System.out.println("We got an incorrect packet as our last packet for write, but connection has been dropped due to sending last data packet, so not sending error packet 4.");
 					} // end if
-					if (receivePacket.getPort() != threadPort && worked) {
-						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
+					
+					if ((receivePacket.getPort() != threadPort || receivePacket.getAddress() != threadAddress) && worked) { // handle receiving from the wrong TID
+						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
-							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, InetAddress.getLocalHost(), receivePacket.getPort()));
-							System.out.println("Client sent error packet 5");
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));
+							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -497,28 +536,29 @@ public class Client extends Thread {
 						} // end catch
 						worked = false;
 					} // end if
+					
 					else if(worked) {
 						receivePacket.setData(Arrays.copyOfRange(reply, 0, receivePacket.getLength()));
 					} // end if
-					if (worked && receivePacket.getLength() != 4 && endFile) {
-						System.out.println("We got an incorrect packet as our last packet for write, but connection has been dropped due to sending last data packet, so not sending error packet 4.");
-					} // end if
+					
 					if (numberOfTimeouts == 5) {
-						System.out.println("Client has timed out 5 times waiting for the next ack packet from server");
+						System.out.println("Client has timed out 5 times waiting for the next ack packet from server, server assumed dead, client thread terminating");
 						return;
 					} // end if
+					
 					if (endFile && worked) { // breaks if endfile and the it received a response
-						printInformation(receivePacket);
+						System.out.println("Client has received last packet from the server during a write request");
 						return;
 					} // end if
+					
 				} // end whileloop
+				
 				ackNumber[1]++;
 				if(ackNumber[1] == 0) {
 					ackNumber[0]++;
 				}
 				blockNum++;
-				System.out.println("Client just received ack packet from server");
-				printInformation(receivePacket);
+
 			} // end whileloop
 		} // end if
 
@@ -541,7 +581,7 @@ public class Client extends Thread {
 	private byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
 
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(directory + "\\" + filenameString));
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(directory));
 
 		byte[] data = new byte[512];
 		int i = 0;
@@ -551,16 +591,16 @@ public class Client extends Thread {
 		if ((i = in.read(data)) == -1){
 			in.close();
 			return new byte[0];
-		}
+		} // end if
 
 		in.close();
 
-		if (i < 512)
+		if (i < 512) // act differently if we've hit the end of the file
 		{
 			byte[] tempData = new byte[i];
 			System.arraycopy(data, 0, tempData, 0, i);
 			return tempData;
-		}
+		} // end if
 
 		return data;
 
@@ -572,18 +612,17 @@ public class Client extends Thread {
 	 * @param writeData the data which is to be written
 	 * @throws FileNotFoundException if the file cannot be found to right to, meaning we have an access violation
 	 * @throws IOException if there is an issue with IO
-	 * @throws SyncFailedException if the disk if full
 	 * 
 	 * @since May 17 2014
 	 * 
-	 * Latest Change: Changed BufferedOutputStream to FileOutputStream in order to catch disk full errors
-	 * @version May 31 2014
+	 * Latest Change: Changed so user enters the full path of the file to save as
+	 * @version June 14 2014
 	 * @author Kais
 	 * 
 	 */
 	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
-		FileOutputStream out = new FileOutputStream(directory + "\\output" + filenameString, (blockNum > 1) ? true : false);
+		FileOutputStream out = new FileOutputStream(directory, (blockNum > 1) ? true : false);
 		out.write(writeData, 0, writeData.length);
 		out.getFD().sync();
 		out.close();
@@ -637,7 +676,7 @@ public class Client extends Thread {
 	} // end method
 
 	/**
-	 * The following method will be called when trying to print out information about a specific packet
+	 * The following method will be called when trying to print out information about a specific packet, used in testing and debugging during the project only
 	 * @param p the information displayed desired for this packet
 	 * 
 	 * @since May 11 2014
@@ -661,15 +700,16 @@ public class Client extends Thread {
 		System.out.println("\n\n");
 
 	} // end method
-	
+
 	/**
 	 * Following method will print the error message from an error packet
 	 * @param errorMsg the byte array containing the entirety of the message from the error packet
+	 * @param length the length of the error message
 	 * 
 	 * @since May 30 2014
 	 * 
 	 * Latest Change: Added implementation for this method
-	 * @version May 30 2014
+	 * @version June 9 2014
 	 * @author Kais
 	 */
 	private void printErrorMsg(byte[] errorMsg, int length) {
@@ -696,7 +736,7 @@ public class Client extends Thread {
 		msg[1] = five;
 		msg[2] = zero;
 		msg[3] = type;
-		
+
 		/* Insert the error message */
 		for(int i = 0; i < errorMsg.length; i++)
 			msg[i+4] = errorMsg[i];
@@ -705,7 +745,7 @@ public class Client extends Thread {
 		msg[msg.length -1] = zero;
 
 		return msg;
-	}
+	} // end method
 
 	/**
 	 * Following method will create the message which is being put into the packet
@@ -763,5 +803,5 @@ public class Client extends Thread {
 	public void run() {
 		sendReceive(req);
 		sendReceiveSocket.close();
-	}
+	} // end method
 } // end class

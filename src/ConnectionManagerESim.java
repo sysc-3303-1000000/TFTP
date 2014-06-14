@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.net.*;
+import java.util.Arrays;
 
 /**
  * The following is implementation for the ConnectionManagerESim which will form
@@ -42,6 +43,7 @@ public class ConnectionManagerESim extends Thread {
 	private byte serverData[] = new byte[DATA_SIZE]; // this will store the response from the server
 	private byte trueLastPacket[] = new byte[2]; // will store the block number of the truly last packet to verify if we have received it or not
 	private byte errorCode[] = new byte[2]; // will store the error code number (if applicable)
+	private byte errorMsg[]; // will store the error message
 	/**
 	 * The following is the constructor for ListenerESim
 	 * @param output determines the level of output we want to display
@@ -131,7 +133,7 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 */
 	private void printInformation(DatagramPacket p) {
-
+		int blockNum = (p.getData()[3] & 0xFF) + 256*(p.getData()[2] & 0xFF);
 		if (debug) { // print all information
 			// print out the information on the packet
 			System.out.println("PACKET INFORMATION:");
@@ -141,16 +143,18 @@ public class ConnectionManagerESim extends Thread {
 			System.out.println("Length of packet: " + p.getLength());
 			System.out.println("Bytes: ");
 			for (int i = 0; i < p.getLength(); i++) {
-				System.out.print(Integer.toHexString(p.getData()[i]));
+				System.out.print(p.getData()[i]);
 			} // end forloop
+			System.out.println("\nBlock Number: " + blockNum);
 			System.out.println("\n******************************************************");
 			System.out.println("\n");
+			
 		}
 		else if (verbose) { // print only relevant information
 			// print out the information on the packet
 			System.out.println("Length of packet: " + p.getLength());
 			System.out.println("Packet Type: " + p.getData()[0] + p.getData()[1]);
-			System.out.println("Block Number: " + p.getData()[2] + p.getData()[3]);
+			System.out.println("Block Number: " + blockNum);
 		}
 		else if (silent){
 		}
@@ -216,7 +220,20 @@ public class ConnectionManagerESim extends Thread {
 		// begin closing operations
 		if (errorReceived) { // if an error was received, print out the error code and its message
 			System.out.println("ConnectionManagerESim: Shutting down due to an error code: " + errorCode[0] + errorCode[1]);
+			printErrorMsg(errorMsg, errorMsg.length);
 		}// end if
+		else if (mode == 0 && (debug || verbose))
+			System.out.println("ConnectionManagerESim: Successful transfer!");
+		else if (mode == 1 && (debug || verbose))
+			System.out.println("ConnectionManagerESim: Lost packet was never sent -- packet number may be out of range of the total number of packets in transfer");
+		else if (mode == 2 && (debug || verbose))
+			System.out.println("ConnectionManagerESim: Delayed packet was never sent -- packet number may be out of range of the total number of packets in transfer");
+		else if (mode == 3 && (debug || verbose))
+			System.out.println("ConnectionManagerESim: Duplicate packet was never sent -- packet number may be out of range of the total number of packets in transfer");
+		else if ((mode == 4 || mode == 5 || mode == 6 || mode == 7) && (debug || verbose))
+			System.out.println("ConnectionManagerESim: Packet to corrupt was never sent -- packet number may be out of range of the total number of packets in transfer");
+		else if (mode == 8 && (debug || verbose))
+			System.out.println("ConnectionManagerESim: Packet to send from invalid TID was never sent -- packet number may be out of range of the total number of packets in transfer");
 		System.out.println("ConnectionManagerESim: closing its sockets and shutting down the thread");
 		serverSocket.close();
 		clientSocket.close();
@@ -334,8 +351,6 @@ public class ConnectionManagerESim extends Thread {
 				else { // this is not the packet we want to lose, send to server
 					serverSend();
 					if (errorReceived || (lastPacketRead && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])) {	
-						if (debug || verbose)
-							System.out.println("ConnectionManagerESim: ACK packet to lose was never sent -- packet number may be out of range of the total number of packets in transfer or we errored out");
 						return true;	// Last packet is now sent. The thread will close
 					}// end if
 				}//end else
@@ -369,8 +384,6 @@ public class ConnectionManagerESim extends Thread {
 
 				serverSend();
 				if (errorReceived || (lastPacketRead && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])) {	
-					if (debug || verbose)
-						System.out.println("ConnectionManagerESim: DATA packet to lose was never sent -- packet number may be out of range of the total number of packets in transfer or we errored out ");
 					return true;	// Last packet is now sent. The thread will close
 				}// end if
 				// we need to wait on a server packet
@@ -478,10 +491,8 @@ public class ConnectionManagerESim extends Thread {
 				clientSend();
 				// we just sent the last ACK packet to the client, we are done.
 				if (errorReceived || (lastPacketWrite && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])) {
-					if (debug || verbose)
-						System.out.println("ConnectionManagerESim: ACK packet to lose was never sent -- packet number may be out of range of the total number of packets in transfer");
 					return true;
-				}
+				}// end if
 				else
 					return false;
 			}// end else if
@@ -523,8 +534,6 @@ public class ConnectionManagerESim extends Thread {
 				//send to the client
 				clientSend();
 				if (errorReceived || (lastPacketWrite && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3])) {	
-					if (debug || verbose)
-						System.out.println("ConnectionManagerESim: DATA packet to lose was never sent -- packet number may be out of range of the total number of packets in transfer or we errored out");
 					return true;	// Last packet is now sent. The thread will close
 				}// end if
 				firstPacket = false; // this is no longer the first packet
@@ -539,66 +548,80 @@ public class ConnectionManagerESim extends Thread {
 	 * 
 	 * @since May 21 2014
 	 * 
-	 * Latest Change: Allow user to specify which packet to delay and by how much
-	 * @version May 29 2014
+	 * Latest Change: Allows for function to recognize an error
+	 * @version June 13 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */
 	private boolean delayedOp()
 	{
-		// check to see if the which packet is the one being delayed
-		if (packetType == 1 || packetType == 2) { // RRQ or WRQ packet is being delayed
+		if (requestType == Request.READ) { // this is a read request
+			// check to see if the which packet is the one being delayed
+			if (packetType == 1) { // RRQ packet is being delayed
 
-			if(debug)
-				System.out.println("ConnectionManagerESim: RRQ/WRQ packet will be delayed. Thread will sleep now");
-			try {
-				Thread.sleep(delay);	//delays the packet for the specified amount
-			}// end  try
-			catch (InterruptedException e) { } // end catch
+				if(debug || verbose) {
+					System.out.println("ConnectionManagerESim: This is the RRQ packet.");
+					System.out.println("ConnectionManagerESim: Delaying packet..");
+				}// end if
+				try {
+					Thread.sleep(delay);	//delays the packet for the specified amount
+				}// end  try
+				catch (InterruptedException e) { } // end catch
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
 
-			System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+				serverSend();
+				if (errorReceived || (lastPacketRead && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))	
+					return true;	// Last packet is now sent. The thread will close
+				serverReceive();
+				clientSend();
+				if (errorReceived)
+					return true;
+				// switch back to normal operation
+				mode = 0;
 
-			serverSend();
-
-			serverReceive();
-
-			clientSend();
-
-			// switch back to normal operation
-			mode = 0;
-
-			firstPacket = false;
-			return false;
-		}// end if
-
-		// now we check if this is a read or write so we can delay on the appropriate packet
-		else if (requestType == Request.READ) { // this is a read request
+				firstPacket = false;
+				return false;
+			}// end if
+			else if (packetType == 2) { // delay a WRQ packet which will never happen
+				if (debug || verbose) 
+					System.out.println("ConnectionManagerESim: It is a read request, and a WRQ is requested to delay. This will never happen. Changing back to normal mode");
+				mode = 0;
+				return false;
+			} // end else if
 			if (packetType == 3) { // DATA packet being delayed from the server 
 
 				if (!firstPacket)
 					clientReceive();
 
 				serverSend();
-				if (errorReceived || lastPacketRead)	
+				if (errorReceived || (lastPacketRead && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3]))	
 					return true;	// Last packet is now sent. The thread will close
 				serverReceive();
 				// check  to see if this is the data packet we want to delay
 				if (foundPacket(receiveServerPacket)) {
-					if(debug)
-						System.out.println("ConnectionManagerESim: DATA packet will be delayed. Thread will sleep now");
+					if(debug || verbose) {
+						System.out.println("ConnectionManagerESim: This is the correct DATA packet:");
+						printInformation(receiveServerPacket);
+						System.out.println("ConnectionManagerESim: Delaying packet..");
+					}// end if
 					try {
 						Thread.sleep(delay);	//delays the packet for the specified amount
 					}// end try
 					catch (InterruptedException e) { } // end catch
-
-					System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+					System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms");
 					// switch back to normal operation
 					mode = 0;
 				} // end if
 
 				clientSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
-					if(sendClientPacket.getLength() < DATA_SIZE) 
+					if(sendClientPacket.getLength() < DATA_SIZE)  {
 						lastPacketRead = true;
+						trueLastPacket[0] = sendClientPacket.getData()[2];
+						trueLastPacket[1] = sendClientPacket.getData()[3];
+					}// end if
 				} // end if
 				firstPacket = false;
 				return false;
@@ -610,27 +633,36 @@ public class ConnectionManagerESim extends Thread {
 					clientReceive();
 					// check  to see if this is the ACK packet we want to delay
 					if (foundPacket(receiveClientPacket)) {
-						if(debug)
-							System.out.println("ConnectionManagerESim: ACK packet will be delayed. Thread will sleep now");
+						if(debug || verbose) {
+							System.out.println("ConnectionManagerESim: This is the correct DATA packet:");
+							printInformation(receiveClientPacket);
+							System.out.println("ConnectionManagerESim: Delaying packet..");
+						}// end if
 						try {
 							Thread.sleep(delay);	//delays the packet for the specified amount
 						}// end try
 						catch (InterruptedException e) { } // end catch
 
-						System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+						System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms");
 						// switch back to normal operation
 						mode = 0;
 					} // end if
 				}
 				serverSend();
-				if (errorReceived || lastPacketRead)	
+				if (errorReceived || (lastPacketRead && trueLastPacket[0] == sendServerPacket.getData()[2] && trueLastPacket[1] == sendServerPacket.getData()[3])) {	
 					return true;	// Last packet is now sent. The thread will close
+				}// end if
 
 				serverReceive();
 				clientSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
-					if(sendClientPacket.getLength() < DATA_SIZE) 
+					if(sendClientPacket.getLength() < DATA_SIZE) {
 						lastPacketRead = true;
+						trueLastPacket[0] = sendClientPacket.getData()[2];
+						trueLastPacket[1] = sendClientPacket.getData()[3];
+					}// end if
 				} // end if	
 				firstPacket = false;
 				return false;
@@ -638,33 +670,70 @@ public class ConnectionManagerESim extends Thread {
 		}// end else if
 
 		else if (requestType == Request.WRITE) { // this is a write request
+			// check to see if the which packet is the one being delayed
+			if (packetType == 2) { // WRQ packet is being delayed
+				if(debug || verbose)
+					System.out.println("ConnectionManagerESim: WRQ packet will be delayed. Thread will sleep now");
+				try {
+					Thread.sleep(delay);	//delays the packet for the specified amount
+				}// end  try
+				catch (InterruptedException e) { } // end catch
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+
+				serverSend();
+				if (errorReceived)
+					return true;
+				serverReceive();
+				clientSend();
+				if (errorReceived)
+					return true;
+				// switch back to normal operation
+				mode = 0;
+
+				firstPacket = false;
+				return false;
+			}// end if
+			else if (packetType == 1) { // delay a RRQ packet which will never happen
+				if (debug || verbose) 
+					System.out.println("ConnectionManagerESim: It is a write request, and a RRQ is requested to delay. This will never happen. Changing back to normal mode");
+				mode = 0;
+				return false;
+			} // end else if			
 			if (packetType == 4) { // ACK packet being delayed from the server 
 
 				if (!firstPacket)
 					clientReceive();
 
 				serverSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
-					if(sendServerPacket.getLength() < DATA_SIZE)
+					if(sendServerPacket.getLength() < DATA_SIZE) {
 						lastPacketWrite = true;	
+						trueLastPacket[0] = sendServerPacket.getData()[2];
+						trueLastPacket[1] = sendServerPacket.getData()[3];
+					}// end if 
 				} // end if
 				serverReceive();
 				// check  to see if this is the ACK packet we want to delay
 				if (foundPacket(receiveServerPacket)) {
-					if(debug)
-						System.out.println("ConnectionManagerESim: ACK packet will be delayed. Thread will sleep now");
+					if(debug || verbose) {
+						System.out.println("ConnectionManagerESim: This is the correct ACK packet:");
+						printInformation(receiveServerPacket);
+						System.out.println("ConnectionManagerESim: Delaying packet..");
+					}// end if
 					try {
 						Thread.sleep(delay);	//delays the packet for the specified amount
 					}// end try
 					catch (InterruptedException e) { } // end catch
-
-					System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms!");
+					System.out.println("ConnectionManagerESim: Packet was delayed by: " + delay + "ms");
 					// switch back to normal operation
 					mode = 0;
 				} // end if
 
 				clientSend();
-				if (errorReceived || lastPacketWrite)
+				if (errorReceived || (lastPacketWrite && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]))
 					return true;	// Last packet is now sent. The thread will close
 				firstPacket = false;
 				return false;
@@ -689,13 +758,18 @@ public class ConnectionManagerESim extends Thread {
 					} // end if
 				}
 				serverSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
-					if(sendServerPacket.getLength() < DATA_SIZE)
-						lastPacketWrite = true;	
+					if(sendServerPacket.getLength() < DATA_SIZE) {
+						lastPacketWrite = true;
+						trueLastPacket[0] = sendServerPacket.getData()[2];
+						trueLastPacket[1] = sendServerPacket.getData()[3];
+					}// end if
 				} // end if
 				serverReceive();
 				clientSend();
-				if (errorReceived || lastPacketWrite)
+				if (errorReceived || (lastPacketWrite && trueLastPacket[0] == sendClientPacket.getData()[2] && trueLastPacket[1] == sendClientPacket.getData()[3]))
 					return true;	// Last packet is now sent. The thread will close			
 				firstPacket = false;
 				return false;
@@ -716,35 +790,45 @@ public class ConnectionManagerESim extends Thread {
 	 */
 	private boolean duplicatedOp()
 	{
-		// check to see if the which packet is the one being duplicated
-		if (packetType == 1 || packetType == 2) { // RRQ or WRQ packet is being duplicated
-			if (debug)
-				System.out.println("ConnectionManagerESim: RRQ/WRQ packet will be duplicated. Sending first packet");
-			serverSend();
-			if(debug)
-				System.out.println("ConnectionManagerESim: Thread will sleep now");
-			try {
-				Thread.sleep(delay);	//delays the packet for the specified amount
-			}// end  try
-			catch (InterruptedException e) { } // end catch
-			if (debug)
-				System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
-			serverSend();
-
-			serverReceive();
-
-			clientSend();
-
-			// switch back to normal operation
-			mode = 0;
-
-			firstPacket = false;
-			return false;
-		}// end if
-
 		// now we check if this is a read or write so we can duplicate on the appropriate packet
-		else if (requestType == Request.READ) { // this is a read request
-			if (packetType == 3) { // DATA packet being duplicated from the server 
+		if (requestType == Request.READ) { // this is a read request
+			// check to see if the which packet is the one being duplicated
+			if (packetType == 1) { // RRQ packet is being duplicated
+				if (debug || verbose) {
+					System.out.println("ConnectionManagerESim: RRQ packet will be duplicated. Sending first packet");
+				}// end if
+				serverSend();
+				if(debug || verbose)
+					System.out.println("ConnectionManagerESim: Thread will sleep now");
+				try {
+					Thread.sleep(delay);	//delays the packet for the specified amount
+				}// end  try
+				catch (InterruptedException e) { } // end catch
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms");
+				serverSend();
+				if (errorReceived)
+					return true;
+				serverReceive();
+
+				clientSend();
+				if (errorReceived) { // if we receive an error, ensure that we send it to the server
+					serverSend();
+					return true;
+				}
+				// switch back to normal operation
+				mode = 0;
+
+				firstPacket = false;
+				return false;
+			}// end if
+			else if (packetType == 2) { // delay a WRQ packet which will never happen
+				if (debug || verbose) 
+					System.out.println("ConnectionManagerESim: It is a read request, and a WRQ is requested to duplicate. This will never happen. Changing back to normal mode");
+				mode = 0;
+				return false;
+			} // end else if
+			else if (packetType == 3) { // DATA packet being duplicated from the server 
 
 				if (!firstPacket)
 					clientReceive();
@@ -756,7 +840,7 @@ public class ConnectionManagerESim extends Thread {
 				serverReceive();
 				// check  to see if this is the data packet we want to duplicate
 				if (foundPacket(receiveServerPacket)) {
-					if (debug)
+					if (debug || verbose)
 						System.out.println("ConnectionManagerESim: DATA packet will be duplicated. Sending first packet");
 					clientSend();
 					if(debug)
@@ -765,11 +849,13 @@ public class ConnectionManagerESim extends Thread {
 						Thread.sleep(delay);	//delays the packet for the specified amount
 					}// end try
 					catch (InterruptedException e) { } // end catch
-					if (debug)
+					if (debug || verbose)
 						System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
 					// switch back to normal operation
 					mode = 0;
 					clientSend();
+					if (errorReceived)
+						return true;
 					// this will ensure that we exit out of the program if we are duplicating the last DATA packet
 					if (!firstPacket) {
 						if (debug)
@@ -789,6 +875,8 @@ public class ConnectionManagerESim extends Thread {
 					else {
 						serverReceive();
 						clientSend();
+						if (errorReceived)
+							return true;
 						if (!firstPacket) {
 							if (debug)
 								System.out.println("Checking if this packet size is less than 512:");
@@ -809,6 +897,8 @@ public class ConnectionManagerESim extends Thread {
 				} // end if
 
 				clientSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
 					if(sendClientPacket.getLength() < DATA_SIZE) { 
 						lastPacketRead = true;
@@ -829,6 +919,8 @@ public class ConnectionManagerESim extends Thread {
 						if (debug)
 							System.out.println("ConnectionManagerESim: ACK packet will be duplicated. Sending first packet");
 						serverSend();
+						if (errorReceived)
+							return true;
 						if(debug)
 							System.out.println("ConnectionManagerESim: Thread will sleep now");
 						try {
@@ -845,6 +937,8 @@ public class ConnectionManagerESim extends Thread {
 							return true;
 						serverReceive();
 						clientSend();
+						if (errorReceived)
+							return true;
 						// this will ensure that we exit out of the program if we are duplicating the last ACK packet
 						if (!firstPacket) {
 							if (debug)
@@ -869,6 +963,8 @@ public class ConnectionManagerESim extends Thread {
 					return true;	// Last packet is now sent. The thread will close
 				serverReceive();
 				clientSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
 					if(sendClientPacket.getLength() < DATA_SIZE) { 
 						lastPacketRead = true;
@@ -882,25 +978,58 @@ public class ConnectionManagerESim extends Thread {
 		}// end else if
 
 		else if (requestType == Request.WRITE) { // this is a write request
-			if (packetType == 3) { // DATA packet being duplicated from the client 
+			if (packetType == 2) { // WRQ packet is being duplicated
+				if (debug || verbose) {
+					System.out.println("ConnectionManagerESim: WRQ packet will be duplicated. Sending first packet");
+				}// end if
+				serverSend();
+				if(debug || verbose)
+					System.out.println("ConnectionManagerESim: Thread will sleep now");
+				try {
+					Thread.sleep(delay);	//delays the packet for the specified amount
+				}// end  try
+				catch (InterruptedException e) { } // end catch
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms");
+				serverSend();
+				if (errorReceived)
+					return true;
+				serverReceive();
+
+				clientSend();
+
+				// switch back to normal operation
+				mode = 0;
+
+				firstPacket = false;
+				return false;
+			}// end if
+			else if (packetType == 1) { // delay a RRQ packet which will never happen
+				if (debug || verbose) 
+					System.out.println("ConnectionManagerESim: It is a write request, and a RRQ is requested to duplicate. This will never happen. Changing back to normal mode");
+				mode = 0;
+				return false;
+			} // end else if
+			else if (packetType == 3) { // DATA packet being duplicated from the client 
 				if (!firstPacket)
 					clientReceive();
-				firstPacket = false;
 				if (foundPacket(receiveClientPacket)){
-					if (debug)
+					if (debug || verbose)
 						System.out.println("ConnectionManagerESim: DATA packet will be duplicated. Sending first packet");
 					serverSend();
-					if(debug)
+					if(debug || verbose)
 						System.out.println("ConnectionManagerESim: Thread will sleep now");
 					try {
 						Thread.sleep(delay);	//delays the packet for the specified amount
 					}// end try
 					catch (InterruptedException e) { } // end catch
-					if (debug)
+					if (debug || verbose)
 						System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
 					// switch back to normal operation
 					mode = 0;
 					serverSend();
+					if (errorReceived)
+						return true;
 					if (!firstPacket) {
 						if (debug)
 							System.out.println("Checking if this packet size is less than 512:");
@@ -945,6 +1074,8 @@ public class ConnectionManagerESim extends Thread {
 
 
 				serverSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
 					if (debug)
 						System.out.println("Checking if this packet size is less than 512:");
@@ -972,6 +1103,8 @@ public class ConnectionManagerESim extends Thread {
 				} // end if
 
 				serverSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
 					if (debug)
 						System.out.println("Checking if this packet size is less than 512:");
@@ -985,16 +1118,16 @@ public class ConnectionManagerESim extends Thread {
 				serverReceive();
 				// check  to see if this is the ack packet we want to duplicate
 				if (foundPacket(receiveServerPacket)) {
-					if (debug)
+					if (debug || verbose)
 						System.out.println("ConnectionManagerESim: ACK packet will be duplicated. Sending first packet");
 					clientSend();
-					if(debug)
+					if(debug || verbose)
 						System.out.println("ConnectionManagerESim: Thread will sleep now");
 					try {
 						Thread.sleep(delay);	//delays the packet for the specified amount
 					}// end try
 					catch (InterruptedException e) { } // end catch
-					if (debug)
+					if (debug || verbose)
 						System.out.println("ConnectionManagerESim: Second duplicate packet will be sent and was delayed by: " + delay + "ms!");
 					// switch back to normal operation
 					mode = 0;
@@ -1014,24 +1147,26 @@ public class ConnectionManagerESim extends Thread {
 	 * User will be able to specify which packet to corrupt and how it is corrupted
 	 * @since June 4 2014
 	 * 
-	 * @version June 4 2014
+	 * Latest Change: Updated output and changed behaviour to work with an error
+	 * @version June 13 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong  
-	 * @param x is the position of the corruption
 	 */
 	private boolean corruptOp()
 	{
 		// check to see if the which packet is the one being delayed
 		if (packetType == 1 || packetType == 2) { // RRQ or WRQ packet is being corrupt 
-			if(debug)
+			if(debug || verbose)
 				System.out.println("ConnectionManagerESim: RRQ/WRQ packet will be corrupted.");
 			int x = corruptPos() ;
 			clientData[x] = (byte)7;	//All read and write request corruption will be turned into an invalid
 			serverSend();
-
+			if (errorReceived)	
+				return true;	// Last packet is now sent. The thread will close
 			serverReceive();
 
 			clientSend();
-
+			if (errorReceived)	
+				return true;	// Last packet is now sent. The thread will close
 			return true;
 		}// end if
 
@@ -1048,9 +1183,11 @@ public class ConnectionManagerESim extends Thread {
 				serverReceive();
 				// check  to see if this is the data packet we want to corrupt
 				if (foundPacket(receiveServerPacket)) {
-					if(debug) {
-						System.out.println("ConnectionManagerESim: DATA packet will be corrupt.");
-					}
+					if (debug || verbose) {
+						System.out.println("ConnectionManagerESim: This is the correct DATA packet:");
+						printInformation(receiveServerPacket);
+						System.out.println("ConnectionManagerESim: DATA packet corrupted.");
+					}// end if
 					int x = corruptPos() ;
 					if(packetNumber == 7)
 						serverData[x] = (byte)8;	//Packet will now have an invalid request
@@ -1058,6 +1195,8 @@ public class ConnectionManagerESim extends Thread {
 						serverData[x] = (byte)7;	//Packet will now have an invalid request
 				} // end if
 				clientSend();
+				if (errorReceived)
+					return true;
 				if (!firstPacket) {
 					if(sendClientPacket.getLength() < DATA_SIZE) 
 						lastPacketRead = true;
@@ -1072,8 +1211,11 @@ public class ConnectionManagerESim extends Thread {
 					clientReceive();
 					// check  to see if this is the ACK packet we want to delay
 					if (foundPacket(receiveClientPacket)) {
-						if(debug)
-							System.out.println("ConnectionManagerESim: ACK packet will be corrupted.");
+						if (debug || verbose) {
+							System.out.println("ConnectionManagerESim: This is the correct ACK packet:");
+							printInformation(receiveServerPacket);
+							System.out.println("ConnectionManagerESim: ACK packet corrupted.");
+						}// end if
 						int x = corruptPos() ;
 						if(packetNumber == 7)
 							clientData[x] = (byte)8;	//Packet will now have an invalid request
@@ -1146,6 +1288,8 @@ public class ConnectionManagerESim extends Thread {
 					} // end if
 				}
 				serverSend();
+				if (errorReceived)	
+					return true;	// Last packet is now sent. The thread will close
 				if (!firstPacket) {
 					if(sendServerPacket.getLength() < DATA_SIZE)
 						lastPacketWrite = true;	
@@ -1166,13 +1310,13 @@ public class ConnectionManagerESim extends Thread {
 	 * The server must ensure that the packet has a valid file mode: netascii or octet
 	 * If not, they must send error code 04 to the other party and shuts down
 	 * @since June 11 2014
-	 * Latest Change: Added method to handle file mode
-	 * @version June 11 2014
+	 * Latest Change: Updated output
+	 * @version June 13 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
 	 */
 	private boolean corruptMode() {
 		if (packetType == 1 || packetType == 2){ // corrupting the appropriate request for a file mode
-			if (debug)
+			if (debug || verbose)
 				System.out.println("ConnectionManagerESim: corrupting File Mode in request");			
 
 			int count = 0;
@@ -1188,14 +1332,18 @@ public class ConnectionManagerESim extends Thread {
 			}// end for
 			clientData[index+1] = (byte)48;
 
-			if (debug)
+			if (debug || verbose)
 				System.out.println("ConnectionManagerESim: simulating a corrupted request packet");
 			// send server invalid file mode	
 			serverSend();
+			if (errorReceived)	
+				return true;	// Last packet is now sent. The thread will close
 			// receive error packet from server
 			serverReceive();
 			// send error to client
 			clientSend();
+			if (errorReceived)	
+				return true;	// Last packet is now sent. The thread will close
 			return true; 
 		}
 		mode = 0;
@@ -1207,8 +1355,8 @@ public class ConnectionManagerESim extends Thread {
 	 * The client and server must ensure that the packet is coming from the expected source
 	 * If not, they must send error code 05 to the other party and continue working 
 	 * @since June 5 2014
-	 * Latest Change: Fixed to ensure proper end in our method
-	 * @version June 11 2014
+	 * Latest Change: Fixed to ensure proper end in our method and output fixes
+	 * @version June 13 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
 	 */
 	private boolean invalidTID(){
@@ -1216,8 +1364,8 @@ public class ConnectionManagerESim extends Thread {
 		if (requestType == Request.READ){ // this is a read request
 			// ************* ACK PACKET ***************
 			if (packetType == 4){ // check to corrupt TID for ACK packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to corrupt TID of ACK packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid TID of ACK packet");
 				if (!lastPacketRead) {
 
 					if (!firstPacket) {
@@ -1228,7 +1376,7 @@ public class ConnectionManagerESim extends Thread {
 					// check to see if this is the packet that we want to corrupt
 					if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
 						if (debug) {
-							System.out.println("ConnectionManagerESim: simulating a corrupt TID client ACK packet");
+							System.out.println("ConnectionManagerESim: simulating an invalid TID client ACK packet");
 							printInformation(receiveClientPacket);
 						}// end if
 						// corrupt the packet being sent to the server
@@ -1239,7 +1387,7 @@ public class ConnectionManagerESim extends Thread {
 
 					else { // this is not the packet we want to corrupt, send to server
 						serverSend();
-						if (lastPacketRead)	
+						if (errorReceived || lastPacketRead)	
 							return true;	// Last packet is now sent. The thread will close
 					}//end else
 
@@ -1248,6 +1396,8 @@ public class ConnectionManagerESim extends Thread {
 
 					//send to the client
 					clientSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					//check to see if this is the last packet (DATA < 512b 
 					if(sendClientPacket.getLength() < DATA_SIZE) {
 						lastPacketRead = true;
@@ -1261,8 +1411,8 @@ public class ConnectionManagerESim extends Thread {
 					clientReceive();
 					// check to see if this is the packet that we want to corrupt
 					if (foundPacket(receiveClientPacket)) { // this is the packet we want to corrupt
-						if (debug) {
-							System.out.println("ConnectionManagerESim: simulating a corrupt TID client ACK packet");
+						if (debug || verbose) {
+							System.out.println("ConnectionManagerESim: simulating an invalid TID client ACK packet");
 							printInformation(receiveClientPacket);
 						}// end if
 						// corrupt the packet being sent to the server
@@ -1280,8 +1430,8 @@ public class ConnectionManagerESim extends Thread {
 
 			// ************* DATA PACKET ***************
 			else if (packetType == 3){ // check to lose a DATA packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to corrupt TID for a DATA packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid TID for a DATA packet");
 				if (!firstPacket) {
 					// receive from client
 					clientReceive();
@@ -1289,14 +1439,14 @@ public class ConnectionManagerESim extends Thread {
 				firstPacket = false; // this is no longer the first packet
 
 				serverSend();
-				if (lastPacketRead)	
+				if (errorReceived || lastPacketRead)	
 					return true;	// Last packet is now sent. The thread will close
 				// we need to wait on a server packet
 				serverReceive();
 				// check to see if this is the packet that we want to corrupt
 				if (foundPacket(receiveServerPacket)) { // this is the packet we want to corrupt
 					if (debug) {
-						System.out.println("ConnectionManagerESim: simulating a corrupt TID server DATA packet");
+						System.out.println("ConnectionManagerESim: simulating an invalid TID server DATA packet");
 						printInformation(receiveServerPacket);
 					}// end if
 					// corrupt the packet being sent to the server
@@ -1308,6 +1458,8 @@ public class ConnectionManagerESim extends Thread {
 
 				//send to the client
 				clientSend();
+				if (errorReceived)	
+					return true;	// Last packet is now sent. The thread will close
 				//check to see if this is the last packet (DATA < 512b 
 				if(sendClientPacket.getLength() < DATA_SIZE) {
 					lastPacketRead = true;
@@ -1320,13 +1472,17 @@ public class ConnectionManagerESim extends Thread {
 		else if (requestType == Request.WRITE){ // this is a write request
 			// ************* ACK PACKET ***************
 			if (packetType == 4){ // check to lose a ACK packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to lose ACK packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid ACK packet");
 				if (firstPacket) { // if this is the first packet
 					serverSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					serverReceive();
 					firstPacket = false; // this is no longer the first packet
 					clientSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					return false;
 				}// end if		
 				clientReceive();
@@ -1336,13 +1492,14 @@ public class ConnectionManagerESim extends Thread {
 				}
 
 				serverSend();
-
+				if (errorReceived)	
+					return true;	// Last packet is now sent. The thread will close
 				// we need to wait on a server packet
 				serverReceive();
 				// check to see if this is the packet that we want to corrupt
 				if (foundPacket(receiveServerPacket)) { // this is the packet we want to corrupt
 					if (debug) {
-						System.out.println("ConnectionManagerESim: simulating a corrupt TID server ACK packet");
+						System.out.println("ConnectionManagerESim: simulating an invalid TID server ACK packet");
 						printInformation(receiveServerPacket);
 					}// end if
 					// corrupt the packet being sent to the server
@@ -1364,7 +1521,7 @@ public class ConnectionManagerESim extends Thread {
 				//send to the client
 				clientSend();
 				// we just sent the last ACK packet to the client, we are done.
-				if (lastPacketWrite)
+				if (errorReceived || lastPacketWrite)
 					return true;
 				else
 					return false;
@@ -1372,8 +1529,8 @@ public class ConnectionManagerESim extends Thread {
 
 			// ************* DATA PACKET ***************
 			else if (packetType == 3){ // check to corrupt a DATA packet
-				if (debug)
-					System.out.println("ConnectionManagerESim: checking to lose a DATA packet");
+				if (debug || verbose)
+					System.out.println("ConnectionManagerESim: checking to make an invalid TID DATA packet");
 
 				if (!firstPacket) {
 					// receive from client
@@ -1382,14 +1539,16 @@ public class ConnectionManagerESim extends Thread {
 
 				// check to see if this is the packet that we want to corrupt
 				if (foundPacket(receiveClientPacket)) { // this is the packet we want to corrupt
-					if (debug) {
-						System.out.println("ConnectionManagerESim: simulating a corrupt TID client DATA packet");
+					if (debug || verbose) {
+						System.out.println("ConnectionManagerESim: simulating an invalid TID client DATA packet");
 						printInformation(receiveClientPacket);
 					}// end if
 					// corrupt the packet being sent to the server
 					corruptPortServer();
 					clientReceive();
 					serverSend();
+					if (errorReceived)	
+						return true;	// Last packet is now sent. The thread will close
 					if (sendServerPacket.getLength() < DATA_SIZE && !firstPacket) {
 						lastPacketWrite = true;
 						trueLastPacket[0] = sendServerPacket.getData()[2];
@@ -1412,7 +1571,7 @@ public class ConnectionManagerESim extends Thread {
 
 				//send to the client
 				clientSend();
-				if (lastPacketWrite)
+				if (errorReceived || lastPacketWrite)
 					return true;	// Last packet is now sent. The thread will close
 				firstPacket = false; // this is no longer the first packet
 				return false;					
@@ -1445,6 +1604,7 @@ public class ConnectionManagerESim extends Thread {
 			errorReceived = true;
 			errorCode[0] = receiveClientPacket.getData()[2];
 			errorCode[1] = receiveClientPacket.getData()[3];
+			errorMsg = receiveClientPacket.getData();
 		} // end if
 		if (debug) {
 			System.out.println("ConnectionManagerESim: Received packet from client");
@@ -1519,11 +1679,10 @@ public class ConnectionManagerESim extends Thread {
 		} // end catch
 
 		if (receiveServerPacket.getData()[1] == (byte)5) {
-			if (verbose)
-				System.out.println("ConnectionManagerESim: Error Received");
 			errorReceived = true;
 			errorCode[0] = receiveServerPacket.getData()[2];
 			errorCode[1] = receiveServerPacket.getData()[3];
+			errorMsg = receiveClientPacket.getData();
 		}
 		serverData = receiveServerPacket.getData();
 		serverLength = receiveServerPacket.getLength();
@@ -1630,14 +1789,14 @@ public class ConnectionManagerESim extends Thread {
 	 * @return the block number of the packet
 	 * @since May 24 2014
 	 * 
-	 * Latest Change: returning the block number
-	 * @version May 24 2014
+	 * Latest Change: Updated formatting
+	 * @version June 13 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong 
 	 */	
 	private byte[] blockNumber(DatagramPacket p) {
 		byte[] blockNum = {p.getData()[2], p.getData()[3]};
 		if (debug)
-			System.out.println("Block number: " + Integer.toHexString(blockNum[0]) + "" + Integer.toHexString(blockNum[1]));
+			System.out.println("Block number: " + blockNum[0] + blockNum[1]);
 		return blockNum;
 	} // end method
 
@@ -1830,4 +1989,19 @@ public class ConnectionManagerESim extends Thread {
 		}
 		corruptSocket.close();
 	}
+
+	/**
+	 * Following method will print the error message from an error packet
+	 * @param errorMsg the byte array containing the entirety of the message from the error packet
+	 * @param length the length of the error message
+	 * 
+	 * @since May 30 2014
+	 * 
+	 * Latest Change: Encorporated this method into the ErrorSim
+	 * @version June 14 2014
+	 * @author Kais
+	 */
+	private void printErrorMsg(byte[] errorMsg, int length) {
+		System.out.println("ConnectionManagerESim: Error Message: " + new String(Arrays.copyOfRange(errorMsg, 4, length - 1)));
+	} // end method
 } // end class
