@@ -48,16 +48,16 @@ public class ClientUI {
 			if (rw == 1) {
 				System.out.println("What is the name of the file you wish to read from the server? (i.e. 'Test.txt')");
 				filename = br.readLine();
-				System.out.println("Which directory would you like to save this file into? (i.e. 'C:\\Users\\Kais\\git\\TFTP')");
+				System.out.println("Specify the full path of where you would like to save the file, including the filename (i.e. 'C:\\Users\\Kais\\git\\TFTP\\Test.txt')");
 				directory = br.readLine();
 				Thread client = new Client(filename, directory, Request.READ, (socket == 1) ? 69 : 2068); // server or error sim
 				client.start();
 				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
 			else if (rw == 2) {
-				System.out.println("What is the name of the file you wish to write to the server? (i.e. 'Test.txt')");
+				System.out.println("What would you like to name the file on the server side? (i.e. 'Test.txt')");
 				filename = br.readLine();
-				System.out.println("Which directory is this file located in? (i.e. 'C:\\Users\\Kais\\git\\TFTP')");
+				System.out.println("Specify the full path of where the file is located. (i.e. 'C:\\Users\\Kais\\git\\TFTP\\Test.txt')");
 				directory = br.readLine();
 				Thread client = new Client(filename, directory, Request.WRITE, (socket == 1) ? 69 : 2068); // server or error sim
 				client.start();
