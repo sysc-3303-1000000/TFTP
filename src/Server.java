@@ -17,7 +17,6 @@ public class Server extends Thread {
 	private DatagramSocket receive;
 	private DatagramPacket receivedata;
 	private byte data[];
-	private boolean verbose;
 	private static String fileName;
 	private volatile boolean interrupted = false;
 	private static String mode;
@@ -31,9 +30,8 @@ public class Server extends Thread {
 	 * @author Kais
 	 * 
 	 */
-	public Server(boolean verbose) {
+	public Server() {
 		data = new byte[DATA_SIZE];
-		this.verbose = verbose;
 		this.fileName = "";
 
 		try { // initialize the socket to a well known port
@@ -118,12 +116,9 @@ public class Server extends Thread {
 		{
 			byte emsg[] = ("Server has received an invalid Read or Write request").getBytes();
 			try {
-				receive.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, InetAddress.getLocalHost(), p.getPort()));
-				System.out.println("Server sent error packet 4");
+				receive.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, p.getAddress(), p.getPort()));
+				System.out.println("Server sent error packet 4 with message: " + new String(emsg));
 			} // end try
-			catch (UnknownHostException e1) {
-				System.err.println("Unknown Host: " + e1.toString());
-			} // end catch
 			catch (IOException e1) {
 				System.err.println("IO Exception: " + e1.toString());
 			} // end catch
@@ -137,7 +132,7 @@ public class Server extends Thread {
 		System.arraycopy(data, innerzero + 1, modeArray, 0, p.getLength() - innerzero - 2);
 		mode = new String(modeArray);
 
-		Thread newConnectionThread = new ConnectionManager(verbose, p.getData(), p.getPort(), r, p.getLength(), fileName, mode);
+		Thread newConnectionThread = new ConnectionManager(p.getPort(), r, fileName, mode, p.getAddress());
 		newConnectionThread.start();
 	} // end method
 
@@ -159,9 +154,6 @@ public class Server extends Thread {
 		} // end catch
 
 		//data = receivedata.getData(); // extract message
-		if(verbose)
-			printPacketInfo(receivedata);
-
 		verify(receivedata);
 
 	}
@@ -197,7 +189,6 @@ public class Server extends Thread {
 	 * 
 	 */
 	public void run() {
-		System.out.println("Starting the server infinite loop");
 		receivedata =  new DatagramPacket(data, data.length);
 		while(!interrupted)
 			this.sendReceive();
