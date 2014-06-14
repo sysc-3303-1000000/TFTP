@@ -1,0 +1,413 @@
+commit fb4b25ea9b9db70e48ad239a051d8e8b85e37dad
+Merge: 46df367 3d04612
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Thu May 22 22:25:44 2014 -0400
+
+    Merge branch 'master' of https://github.com/sysc-3303-1000000/TFTP
+
+commit 46df367067626e74cd0fc079ccada746054a81c0
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Thu May 22 22:25:34 2014 -0400
+
+    Added: Code to make the write request completely finish before killing
+    the ConnectionManager thread off.
+    
+    Need to change read to do the same
+    
+    Need to change verify in server.java
+
+commit 3d046128c4461cf435cca1ac04493bb6e593e037
+Author: happytimes123 <azn_pride108@hotmail.com>
+Date:   Thu May 22 21:28:35 2014 -0400
+
+    Added functionality when last packet is delivered and closes the
+    connection manager thread for ErrorSim. This is under normal operation.
+
+commit 38ea77830b9fc53445a00189de8800a906183ecd
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Thu May 22 20:56:39 2014 -0400
+
+    Added: fully working client UI, changes to client to run as a thread,
+    and to send packet back and forth to connectionmanagerESim. Changed
+    Server to only have one folder which can be read from.
+
+commit d028742092df6827761f15d3b9a2f0ff11b91227
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Wed May 21 22:35:47 2014 -0400
+
+    Added: Full UI for user to select read or write, locate directory and
+    file. Added so when reading a file from the server, user can only
+    navigate in the server directory for the file. ClientUI will be the
+    "main" client program, which will spawn threads of type client in order
+    to service the users demands. If the client UI is terminated, the client
+    thread will still finish what it is doing before ending, this way we can
+    ensure read and write operations will finish even if the client is
+    shutdown. A file called SingleRootFileSystemView.java has also been
+    added, for ensuring user can only select files from the designated
+    server folder when reading from the server.
+    
+    TODO: Comment all code and implement Client to extend thread, and take
+    information from ClientUI to perform operations
+
+commit 08511c0e7f8d0822e56b5c9de4d08a09662b4ae9
+Merge: 212b72e 4c3d312
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Wed May 21 22:30:48 2014 -0400
+
+    Merge branch 'master' of https://github.com/sysc-3303-1000000/TFTP
+
+commit 212b72ebd457483050081b005fb4706ee5c97809
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Wed May 21 22:30:26 2014 -0400
+
+    Added: Full UI for user to select read or write, locate directory and
+    file. Added so when reading a file from the server, user can only
+    navigate in the server directory for the file. ClientUI will be the
+    "main" client program, which will spawn threads of type client in order
+    to service the users demands. If the client UI is terminated, the client
+    thread will still finish what it is doing before ending, this way we can
+    ensure read and write operations will finish even if the client is
+    shutdown. A file called SingleRootFileSystemView.java has also been
+    added, for ensuring user can only select files from the designated
+    server folder when reading from the server.
+    
+    TODO: Comment all code and implement Client to extend thread, and take
+    information from ClientUI to perform operations.
+
+commit 4c3d31223cdbb82db127237ac86b074498643475
+Author: happytimes123 <azn_pride108@hotmail.com>
+Date:   Wed May 21 20:59:04 2014 -0400
+
+    Updated the following in the ErrorSim:
+    1) Cleaned up the print information formatting
+    2) Added the user interface to select which option they want to operate
+    the ErrorSim in
+    3) Implemented the different operation modes (Lost, Delayed, Duplicated)
+    4) Modified the run method in the ConnectionManagerESim to clean up the
+    Normal operation
+    5) Changed the SERVER_PORT to use the port 69 at the initial request and
+    then the server port that it received the packet from
+    
+    KNOWN ISSUES:
+    1) Shut down only works at the beginning. This is due to the user input
+    only working at the beginning of the ErrorSim creation. Will update this
+    to have it ask for the user input at each new request
+
+commit 5cd494adc01229e44a45a018cd026a5866e3e950
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Wed May 21 20:02:33 2014 -0400
+
+    Added: The client UI, which will invoke instances of client
+
+commit d134ed0ce6d69868ab3de2c8457e4fc072595ba7
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Wed May 21 14:51:59 2014 -0400
+
+    Fixing reading and writing larger files
+
+commit 0b0c84eb4a4b67d324794ec9f32a3d081b422108
+Author: king6moh <king6.moh@gmail.com>
+Date:   Wed May 21 13:44:32 2014 -0400
+
+    Pushing changes done in Lab. Ensuring we can do 512+ bytes
+
+commit 8eb31998d061150780d1f4e0c8f8f9d2164ce0b5
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Tue May 20 20:00:28 2014 -0400
+
+    Added: Proper formatting to code which was added for Iteration 1
+
+commit 926461897c0cdf041e900808f33ec1f7dac4f529
+Author: King6moh <king6.moh@gmail.com>
+Date:   Sat May 17 20:00:12 2014 -0400
+
+    Readme.txt and Diagrams files
+
+commit 2bcd48b0c659350435c9986ae8b6590648e2718c
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 19:59:13 2014 -0400
+
+    WORKING
+
+commit a77cae4c16ba606134d695028e93a105bef974e4
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 19:57:43 2014 -0400
+
+    Fixing user directory
+
+commit 08831b57b3a8bddfc2767b7c91e18bd30779daf9
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 19:53:02 2014 -0400
+
+    Final changes for iteration 1
+
+commit b55c6963b952fec6977c5b5848b9479394e36464
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 19:34:46 2014 -0400
+
+    Changes
+
+commit 8b4dab3d04a41267b0b6c7d4d0d90816da0205f7
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 19:03:56 2014 -0400
+
+    Added: Complete client read and write
+
+commit 4ca6662e29e0c1f2caa517e817f3331ae78bd3e4
+Merge: c71722e 5ee19ca
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 19:02:46 2014 -0400
+
+    Merge branch 'master' of https://github.com/sysc-3303-1000000/TFTP
+
+commit c71722e77c916ae8d4cef4afc9dcfc54782eed0e
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 19:02:20 2014 -0400
+
+    Added: Client complete
+
+commit 5ee19ca987186b0bab8dd1a873eb88c58b9b5f9c
+Merge: c3c9840 739ff06
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 18:44:44 2014 -0400
+
+    Merge branch 'master' of https://github.com/sysc-3303-1000000/TFTP
+
+commit c3c98403bc4e636b940b8a6c58a179371b1513cf
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 18:43:50 2014 -0400
+
+    Updating Connectionmanager with file transfering
+
+commit 739ff064617cf59aa671b8b0ef720e688b48068b
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 18:35:52 2014 -0400
+
+    Added: added write
+
+commit e250c95411cf82d3e94a6cbe5d7a48134c11e672
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 18:14:03 2014 -0400
+
+    Added: new implementation of client, does write stuff
+
+commit a69f98c5d7a96762b4c5e80cbf73e76439d6eb45
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 16:02:54 2014 -0400
+
+    Fixed lengths of packets
+
+commit 7c0cfc7941567ab9d4d11e0183fc37cba901394a
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Sat May 17 15:36:54 2014 -0400
+
+    Adding length of data being passed and removing redundant code
+
+commit 8f642934f5efdb2ce243a162bb64cd7ae0e1af4a
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 15:11:51 2014 -0400
+
+    Added: Working iteration 0, I think
+
+commit c5e6764c234ed5665f3436e2d8d27f579493cd7c
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 14:56:30 2014 -0400
+
+    Fixes: Null pointer issue. This commit is an intermediate step to
+    debugging why the entire system is not working
+
+commit 03826d75f0520a9568709228884bfcc9e55eed91
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 12:45:13 2014 -0400
+
+    Added: Added all remaining changes for iteration 0 except for shutdown.
+    Removed clutter in client.
+
+commit 72da0cc6ead6cdd8399c4daa498098287aa6f112
+Author: King6moh <king6.moh@gmail.com>
+Date:   Sat May 17 12:23:16 2014 -0400
+
+    Formed the read and write response from the server
+
+commit 5c500c9b3930df5bb545adb2c94199a02585c05d
+Author: King6moh <king6.moh@gmail.com>
+Date:   Sat May 17 12:01:57 2014 -0400
+
+    Merged the ListenerEsim into the Error Sim class
+
+commit e396ba18d8896c17bf7c720eee2830c8cbd48430
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 11:58:53 2014 -0400
+
+    Added: Used all listener code to run in server
+
+commit 185f3096863e9207b7fdc27a4b101a0ba51f4c50
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Sat May 17 00:17:34 2014 -0400
+
+    Added: ErrorSim.java, ListenerESim.java, ConnectionManagerESim.java.
+    Changed server code to spawn new listener thread. Removed extraction of
+    message from Listener.java, as this was not needed for any reason.
+    
+    Fixes: Remove Addition of diff files to repository
+
+commit e744c95645942ef40af2281d72a099bbfbbb40ee
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Fri May 16 19:46:16 2014 -0400
+
+    Added: Multithreaded the ErrorSim. Also changed its name to ErrorSim.
+    Transfered all functions from ErrorSim to it's sub components. ErrorSim
+    invokes a ListenerESim thread about startup. Files for subsystems of
+    ErrorSim are ListenerESim.java and ConnectionManagerESim.java.
+
+commit 38e427a98c3325660d8923767108df8878f22f31
+Merge: d07c105 b22712c
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Thu May 15 22:51:22 2014 -0400
+
+    Merge branch 'master' of https://github.com/sysc-3303-1000000/TFTP
+
+commit d07c10539965f528edbd4c1b4041cee604086358
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Thu May 15 20:24:24 2014 -0400
+
+    Changed constructor and added error checking
+
+commit 0e66774724be1711c9546c7d85e8d5b13de7a0ac
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Thu May 15 20:23:46 2014 -0400
+
+    Add TODOs
+
+commit b22712c94e761da793cbdc361d92ec0b42828752
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Thu May 15 20:15:00 2014 -0400
+
+    Added: COmments and Javadoc to existing code added from Moh's assignment
+
+commit 22df4db11eb39fa2b4d3ce9558e58cffadf47f34
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Thu May 15 20:12:48 2014 -0400
+
+    Adding call to Threaded ConnectionManager and error checking
+
+commit c2563669d4fa72a220f4be2ca62636643b799298
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Tue May 13 19:11:14 2014 -0400
+
+    Added: Basic Skeleton for the ConnectionManager. Added Enum for the
+    different type of requests the system can handle. Can be further
+    expanded on future iterations (i.e. errors).
+    
+    Fixes: Changed variable names in Listener. Reordered a TODO because was
+    to be performed at an incorrect stage in the code.
+
+commit d634a548a6cee10246d8210bc7744a0a9c4a43f4
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Tue May 13 17:56:09 2014 -0400
+
+    Added: @since javadoc comment to class
+    
+    Fixes: None
+
+commit 826d0ee793178b733050cf68ab46cd3c70910f03
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Tue May 13 17:44:26 2014 -0400
+
+    Added: Adding the Listener class to the project. Basic structure has
+    been defined, with some implementation already done.
+    
+    Fixes: None
+
+commit 426b7fe6cf86c7b459013abc237beb2165b2f578
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 14:34:42 2014 -0400
+
+    Update Client.java
+
+commit 2b33ed64664122b39df1208265eafa759af151f7
+Merge: 8c8d70b 9259280
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 14:31:39 2014 -0400
+
+    Merge pull request #5 from noneabove1182/master
+    
+    Changed to edited2
+
+commit 92592807f7824d86b7b93cac68e171f81d5a5f51
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 14:14:06 2014 -0400
+
+    Changed to edited2
+
+commit 8c8d70b1e609e3cbf09d2bcf982f39b7b645828a
+Merge: 19ddeb6 384d6f2
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 14:10:02 2014 -0400
+
+    Merge pull request #3 from noneabove1182/master
+    
+    Editing test file
+
+commit 384d6f210b9d3782d80ef2718d0f5c2c122c01cd
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 14:09:40 2014 -0400
+
+    Update Test.txt
+
+commit 9326625cc98a438f747ba0c66d78bb9479b265c6
+Merge: 6d4133b 19ddeb6
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 14:08:42 2014 -0400
+
+    Merge pull request #1 from sysc-3303-1000000/master
+    
+    Updating from master
+
+commit 19ddeb630578edaf5015125585e731c0b3bf9a22
+Merge: 987500d efc1edb
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Mon May 12 14:04:01 2014 -0400
+
+    Merge pull request #2 from Kais93/master
+    
+    Create Test.txt
+
+commit efc1edb4625b44d00af57b3f36a6a907dc9e2470
+Author: Kais93 <khassanali93@gmail.com>
+Date:   Mon May 12 14:03:15 2014 -0400
+
+    Create Test.txt
+
+commit 987500d08d4b5b5b2f89d817b2558bf1d0bed8a8
+Merge: c988ff3 6d4133b
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 13:55:40 2014 -0400
+
+    Merge pull request #1 from noneabove1182/master
+    
+    Making a test commit
+
+commit 6d4133bb70ad40aeaec428d7454f8cde8230b07a
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 13:54:40 2014 -0400
+
+    Making a test commit
+
+commit c988ff36215398024d73b4980750c03e340f3b40
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 13:51:41 2014 -0400
+
+    Redoing
+
+commit 67928311bd688cb0c0515fee6319e5b7e12aa6d0
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 13:49:14 2014 -0400
+
+    Adding base files
+
+commit bdbc1352ac0f02714a400118fdd34391bab4a413
+Author: noneabove1182 <ckealty1182@gmail.com>
+Date:   Mon May 12 10:43:28 2014 -0700
+
+    Initial commit
