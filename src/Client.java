@@ -31,7 +31,7 @@ public class Client extends Thread {
 	private int blockNum, socket, threadPort; // the current datablock number and ack block number
 	private boolean endFile = false; // indicates if we have reached the last DATA block
 	private Request req; // store the type of request
-	private InetAddress address;
+	private InetAddress address, threadAddress; // address of server, address of thread we are dealing with it
 
 	/**
 	 * The following is the constructor for the Client
@@ -156,6 +156,7 @@ public class Client extends Thread {
 		} // end if
 		
 		threadPort = receivePacket.getPort();
+		threadAddress = receivePacket.getAddress();
 		if (req == Request.READ) { // if request was a read
 			byte dat[] = receivePacket.getData();
 			byte ack[] = new byte[4];
@@ -325,10 +326,10 @@ public class Client extends Thread {
 						return;
 					} // end if
 					
-					if (receivePacket.getPort() != threadPort && worked) { // if we receive a packet from a different TID
+					if ((receivePacket.getPort() != threadPort || receivePacket.getAddress() != threadAddress) && worked) { // if we receive a packet from a different TID
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
-							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));
 							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
@@ -520,10 +521,10 @@ public class Client extends Thread {
 						System.out.println("We got an incorrect packet as our last packet for write, but connection has been dropped due to sending last data packet, so not sending error packet 4.");
 					} // end if
 					
-					if (receivePacket.getPort() != threadPort && worked) { // handle receiving from the wrong TID
+					if ((receivePacket.getPort() != threadPort || receivePacket.getAddress() != threadAddress) && worked) { // handle receiving from the wrong TID
 						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
 						try {
-							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, address, receivePacket.getPort()));
+							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));
 							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
 						} // end try
 						catch (UnknownHostException e1) {
