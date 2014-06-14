@@ -41,7 +41,7 @@ public class ClientUI {
 		} while (socket != 1 && socket != 2); // end dowhile
 		do {
 			try {
-				System.out.println("Would you like to specify an IP address or use the local IP? (1 - specify, 2 - use local)");
+				System.out.println("Would you like to specify an IP address or use the local IP? (1 - specify, 2 - use local)"); // use local for now
 				localOrNot = Integer.parseInt(br.readLine());
 			} // end try
 			catch (NumberFormatException nfe) {} // end catch
