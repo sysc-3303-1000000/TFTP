@@ -39,11 +39,12 @@ public class Client extends Thread {
 	 * @param path the path of the file we are going to write to on our side or the path to place the file we are reading from the server
 	 * @param req whether it is a read or write request
 	 * @param socket set to either the server or error sim socket depending on user input
+	 * @param address the InetAddress of the server or error sim
 	 * 
 	 * @since May 22 2014
 	 * 
-	 * Latest Change: Added param socket so we can run in normal mode or error sim mode
-	 * @version June 5 2014
+	 * Latest Change: Added parameter of InetAddress to handle remote server
+	 * @version June 14 2014
 	 * @author Kais
 	 * 
 	 */
@@ -84,8 +85,8 @@ public class Client extends Thread {
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Cleaned up post demo
-	 * @version June 13 2014
+	 * Latest Change: Changed so we no longer to localhost for address, changed way error packet 5 was being handled
+	 * @version June 14 2014
 	 * @author Kais
 	 * 
 	 */
