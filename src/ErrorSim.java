@@ -400,6 +400,13 @@ public class ErrorSim {
 			if (userChoice == 9) {
 				shutdown = true;
 			}
+			if (ip == null) {
+				try {
+					ip = InetAddress.getLocalHost();
+				} catch (UnknownHostException e) {
+					System.err.println("UnknownHostException: " + e.getMessage());
+					} // end catch
+			}// end if
 			ErrorSim esim = new ErrorSim(output, ip);
 			
 			esim.sendReceive();
