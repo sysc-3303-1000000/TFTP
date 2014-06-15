@@ -128,10 +128,11 @@ public class ConnectionManager extends Thread {
 						return;
 					}
 					if(worked && (receivedPacket.getPort() != TiD || !receivedPacket.getAddress().equals(address))){
-						byte emsg[] = ("The Server thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
+						byte emsg[] = ("Packet received from invalid source").getBytes();
 						try {
 							send.send(new DatagramPacket(createErrorMessage((byte)5, emsg), 5 + emsg.length, address, receivedPacket.getPort()));
 							System.out.println("Server sent error packet 5 with message: " + new String(emsg));
+							System.out.println("Server received packet from a different port or IP address than what it has been using for the transfer. File transfer will remain active.");
 						} // end try
 						catch (IOException e1) {
 							System.err.println("IO Exception: " + e1.toString());
@@ -340,10 +341,11 @@ public class ConnectionManager extends Thread {
 					}
 					if(worked && (receivedPacket.getPort() != TiD || !receivedPacket.getAddress().equals(address))){
 						System.out.println("Address: " + address + " received: " + receivedPacket.getAddress() + " port: " + port + " received: " + receivedPacket.getPort());
-						byte emsg[] = ("The Server thread has received a packet from a different port than what it has been receiving from for the transfer").getBytes();
+						byte emsg[] = ("Packet received from invalid source").getBytes();
 						try {
 							send.send(new DatagramPacket(createErrorMessage((byte)5, emsg), 5 + emsg.length, receivedPacket.getAddress(), receivedPacket.getPort()));
 							System.out.println("Server sent error packet 5 with message: " + new String(emsg));
+							System.out.println("Server received packet from a different port or IP address than what it has been using for the transfer. File transfer will remain active.");
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());

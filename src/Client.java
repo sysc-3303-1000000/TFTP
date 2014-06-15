@@ -328,10 +328,11 @@ public class Client extends Thread {
 					} // end if
 					
 					if ((receivePacket.getPort() != threadPort || !receivePacket.getAddress().equals(threadAddress)) && worked) { // if we receive a packet from a different TID
-						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
+						byte emsg[] = ("Packet received from invalid source").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));
 							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
+							System.out.println("Client received packet from a different port or IP address than what it has been using for the transfer. File transfer will remain active.");
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
@@ -523,10 +524,11 @@ public class Client extends Thread {
 					} // end if
 					
 					if ((receivePacket.getPort() != threadPort || !receivePacket.getAddress().equals(threadAddress)) && worked) { // handle receiving from the wrong TID
-						byte emsg[] = ("The client thread has received a packet from a different port than what it has been receiving from for the transfer, client is remaining active").getBytes();
+						byte emsg[] = ("Packet received from invalid source").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(five, emsg), 5 + emsg.length, receivePacket.getAddress(), receivePacket.getPort()));
 							System.out.println("Client sent error packet 5 with message: " + new String(emsg));
+							System.out.println("Client received packet from a different port or IP address than what it has been using for the transfer. File transfer will remain active.");
 						} // end try
 						catch (UnknownHostException e1) {
 							System.err.println("Unknown Host: " + e1.toString());
