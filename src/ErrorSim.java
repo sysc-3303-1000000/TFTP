@@ -34,6 +34,9 @@ public class ErrorSim {
 	private int packetType = 0;
 	// stores which packet number we are altering -- default is 0 if we are running normally
 	private int packetNumber = 0;
+	// stores the IP address of the server
+	private InetAddress serverIP;
+	private InetAddress clientIP;
 	
 	/**
 	 * 	Will determine the user input based on an integer value
@@ -47,13 +50,26 @@ public class ErrorSim {
 	 * 7 Invalid TID
 	 * 9 Shutdown Listener
 	 * 10 Set the output level
+	 * 11 - Set the IP
 	 */
 	private static int userChoice;
 	
 
 	@SuppressWarnings("static-access")
-	public ErrorSim(int output) {	
+	public ErrorSim(int output, InetAddress ip) {	
 		data = new byte[DATA_SIZE];
+		if (ip == null) { // if no IP is specified, use local
+			System.out.println("No IP specified, using local host by default");
+			try {
+				ip = InetAddress.getLocalHost();
+			} catch (UnknownHostException e) {
+				System.err.println("UnknownHostException: " + e.getMessage());
+			}
+		}
+		else {
+			System.out.println("Server IP enterred: " + ip.toString());
+			serverIP = ip;
+		}
 		this.output = output; // initialize the level of output to medium by default
 		// initialize the DatagramSocket receiveSocket to bind to well-known port 68
 		try {
@@ -256,7 +272,9 @@ public class ErrorSim {
 		catch (IOException ie) {
 			System.err.println("IOException error: " + ie.getMessage());
 		} // end catch
-		Thread connectionmanager = new ConnectionManagerESim(output, userChoice, delayAmount, packetType, packetNumber, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
+		clientIP = receiveClientPacket.getAddress();
+		System.out.println("Client packet received from: " + clientIP.toString());
+		Thread connectionmanager = new ConnectionManagerESim(serverIP, clientIP, output, userChoice, delayAmount, packetType, packetNumber, data, receiveClientPacket.getPort(), receiveClientPacket.getLength(), verifyReadWrite(receiveClientPacket));
 		connectionmanager.start();
 
 		while (connectionmanager.getState() != Thread.State.TERMINATED) {
@@ -308,7 +326,8 @@ public class ErrorSim {
 	public static void main(String[] args) {
 		// the scanner to receive a user input
 		Scanner in = new Scanner(System.in);
-		
+		// will hold the IP address chosen
+		InetAddress ip = null;
 		// will hold the value if a valid choice has been entered
 		boolean validChoice = false;
 		boolean shutdown = false;
@@ -318,7 +337,7 @@ public class ErrorSim {
 				
 				// print out information for the user depending on the mode of run they want to use
 				System.out.println("0 - Normal\n1 - Lose a packet\n2 - Delay a packet\n3 - Duplicate\n4 - Invalid packet type\n5 - Invalid block number\n6 - Invalid file mode\n7"
-						+ " - Invalid packet size\n8 - Invalid TID\n9 - Shutdown\n10 - Set output level\n\n");
+						+ " - Invalid packet size\n8 - Invalid TID\n9 - Shutdown\n10 - Set output level\n11 - Set IP Address\n\n");
 				System.out.println("Please enter a mode for the Error Simulator to start in:");
 				
 				userChoice = in.nextInt();
@@ -344,6 +363,33 @@ public class ErrorSim {
 					// go back to main menu
 					validChoice = false; 
 				}// end else if
+				else if (userChoice == 11) { // user wants to specify the IP address
+					int choice;
+					@SuppressWarnings("resource")
+					Scanner input = new Scanner(System.in);
+					System.out.println("Would you like to specify an IP address or use the local IP? (1 - Specify IP, 2 - Use Local)"); 
+					choice = input.nextInt();
+					if (choice == 1) {
+						String address;
+						@SuppressWarnings("resource")
+						Scanner stringInput = new Scanner(System.in);
+						System.out.println("Enter the IP address of the Server. (i.e. 192.168.100.106)");
+						address = stringInput.nextLine();
+						try {
+							ip = InetAddress.getByName(address);
+						} catch (UnknownHostException e) {
+							System.err.println("UnknownHostException: " + e.getMessage());
+						}
+					}// end if
+					else { // any other entry will result in using local IP
+						choice = 2;
+						try {
+							ip = InetAddress.getLocalHost();
+						} catch (UnknownHostException e) {
+							System.err.println("UnknownHostException: " + e.getMessage());
+						}// end catch
+					}// end else
+				}// end else if
 				else {
 					System.out.println("Invalid choice entered. Please try again!");
 					validChoice = false;
@@ -354,7 +400,7 @@ public class ErrorSim {
 			if (userChoice == 9) {
 				shutdown = true;
 			}
-			ErrorSim esim = new ErrorSim(output);
+			ErrorSim esim = new ErrorSim(output, ip);
 			
 			esim.sendReceive();
 			validChoice = false;

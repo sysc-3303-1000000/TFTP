@@ -21,6 +21,7 @@ public class ConnectionManagerESim extends Thread {
 	private int serverPort = 69; // the server port will be initiated to 69 and will change according to the thread needed 
 	private DatagramSocket serverSocket, clientSocket, corruptSocket; // socket deceleration for all three required sockets 
 	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
+	private InetAddress clientIP, serverIP;
 	private boolean debug;
 	private boolean verbose;
 	private boolean silent;
@@ -58,7 +59,7 @@ public class ConnectionManagerESim extends Thread {
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong
 	 * 
 	 */
-	public ConnectionManagerESim(int output, int userChoice, int delay, int packetType, int packetNumber, byte[] data, int port, int length, Request requestType) {
+	public ConnectionManagerESim(InetAddress serverIP, InetAddress clientIP, int output, int userChoice, int delay, int packetType, int packetNumber, byte[] data, int port, int length, Request requestType) {
 		// initialize the variables
 		this.clientData = data;
 		this.clientPort = port;
@@ -68,6 +69,8 @@ public class ConnectionManagerESim extends Thread {
 		this.delay = delay;
 		this.packetType = packetType;
 		this.packetNumber = packetNumber;
+		this.serverIP = serverIP;
+		this.clientIP = clientIP;
 		// initialize the output level
 		setOutput(output);
 		try {
@@ -86,11 +89,8 @@ public class ConnectionManagerESim extends Thread {
 		} // end catch
 		if (debug || verbose)
 			System.out.println("ConnectionManagerESim: Thread started to service request!\n");
-		try {
-			receiveClientPacket = new DatagramPacket(data, length, InetAddress.getLocalHost(), port);
-		} catch (UnknownHostException e) {
-			System.err.println("UnknownHostException: " + e.getMessage());
-		}
+		receiveClientPacket = new DatagramPacket(data, length, clientIP, port);
+
 	} // end constructor
 
 	/**
@@ -120,7 +120,8 @@ public class ConnectionManagerESim extends Thread {
 			verbose = true;
 			silent = false;
 		}// end else if
-	}
+	}// end method
+	
 	/**
 	 * The following method will be called when trying to print out information about a specific packet
 	 * @param p the information displayed desired for this packet
@@ -139,7 +140,6 @@ public class ConnectionManagerESim extends Thread {
 			System.out.println("PACKET INFORMATION:");
 			System.out.println("Host: " + p.getAddress());
 			System.out.println("Host port: " + p.getPort());
-			//System.out.println("Containing the following \nString: " + new String(p.getData()));
 			System.out.println("Length of packet: " + p.getLength());
 			System.out.println("Bytes: ");
 			for (int i = 0; i < p.getLength(); i++) {
@@ -1630,13 +1630,7 @@ public class ConnectionManagerESim extends Thread {
 			System.out.println("ConnectionManagerESim: Preparing packet to send to Client");
 
 		// prepare the new send packet to the client
-		try {
-			sendClientPacket = new DatagramPacket(serverData, serverLength, InetAddress.getLocalHost(), clientPort);
-		} // end try
-		catch (UnknownHostException uhe) {
-			uhe.printStackTrace();
-			System.exit(1);
-		} // end catch
+		sendClientPacket = new DatagramPacket(serverData, serverLength, clientIP, clientPort);
 
 		// send the packet to the client via the send socket 
 		try {
@@ -1708,12 +1702,8 @@ public class ConnectionManagerESim extends Thread {
 		if (debug)
 			System.out.println("ConnectionManageESim: Preparing packet to send to Server");
 		// prepare the new send packet to the server
-		try {
-			sendServerPacket = new DatagramPacket(clientData, clientLength, InetAddress.getLocalHost(), serverPort);
-		} // end try 
-		catch (UnknownHostException uhe) {
-			System.err.println("Unknown host exception error: " + uhe.getMessage());
-		} // end catch
+		sendServerPacket = new DatagramPacket(clientData, clientLength, serverIP, serverPort);
+
 
 		// send the packet to the server via the send/receive socket to server port
 		try {
