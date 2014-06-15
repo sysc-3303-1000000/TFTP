@@ -44,12 +44,12 @@ public class ClientUI {
 			if (rw != 0) {
 				do {
 					try {
-						System.out.println("Would you like to change the IP address for this next operation? (Current IP is: " + IP + ") (1 - yes, 2 - no)"); // use local for now
+						System.out.println("Would you like to change the IP address for this next operation? (Current IP is: " + ((localOrNot == 1) ? IP : InetAddress.getLocalHost()) + ") (1 - yes, 2 - no)"); // use local for now
 						setAgain = Integer.parseInt(br.readLine());
 					} // end try
 					catch (NumberFormatException nfe) {} // end catch
 				} while (setAgain != 1 && setAgain != 2); // end dowhile
-			}
+			} // end if
 			if (setAgain == 1) {
 				do {
 					try {
@@ -68,7 +68,7 @@ public class ClientUI {
 					IP = InetAddress.getByName(br.readLine());
 				} // end if
 				setAgain = 2;
-			}
+			} // end if
 			do {
 				try {
 					System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
