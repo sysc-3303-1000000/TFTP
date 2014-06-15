@@ -1364,7 +1364,7 @@ public class ConnectionManagerESim extends Thread {
 		if (requestType == Request.READ){ // this is a read request
 			// ************* ACK PACKET ***************
 			if (packetType == 4){ // check to corrupt TID for ACK packet
-				if (debug || verbose)
+				if (debug)
 					System.out.println("ConnectionManagerESim: checking to make an invalid TID of ACK packet");
 				if (!lastPacketRead) {
 
@@ -1375,7 +1375,7 @@ public class ConnectionManagerESim extends Thread {
 					firstPacket = false; // this is no longer the first packet
 					// check to see if this is the packet that we want to corrupt
 					if (foundPacket(receiveClientPacket)) { // this is the packet we want to lose
-						if (debug) {
+						if (debug || verbose) {
 							System.out.println("ConnectionManagerESim: simulating an invalid TID client ACK packet");
 							printInformation(receiveClientPacket);
 						}// end if
@@ -1600,7 +1600,7 @@ public class ConnectionManagerESim extends Thread {
 		catch (IOException ie) {
 			System.err.println("IOException error: " + ie.getMessage());
 		}//end catch
-		if (receiveClientPacket.getData()[1] == (byte)5){
+		if (receiveClientPacket.getData()[1] == (byte)5 && receiveClientPacket.getData()[2] != (byte)5){
 			errorReceived = true;
 			errorCode[0] = receiveClientPacket.getData()[2];
 			errorCode[1] = receiveClientPacket.getData()[3];
