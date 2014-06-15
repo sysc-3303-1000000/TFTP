@@ -33,6 +33,7 @@ public class ClientUI {
 		int localOrNot = 0;
 		InetAddress IP = null;
 		int setAgain = 1;
+		/* Handle which mode the user would like */
 		do {
 			try {
 				System.out.println("Would you like to run in normal mode or error simulator mode? (1 - normal, 2 - error simulator)");
@@ -42,7 +43,7 @@ public class ClientUI {
 		} while (socket != 1 && socket != 2); // end dowhile
 		do {
 			if (rw != 0) {
-				do {
+				do { // Handle changing of the IP address
 					try {
 						System.out.println("Would you like to change the IP address for this next operation? (Current IP is: " + ((localOrNot == 1) ? IP : InetAddress.getLocalHost()) + ") (1 - yes, 2 - no)"); // use local for now
 						setAgain = Integer.parseInt(br.readLine());
@@ -51,7 +52,7 @@ public class ClientUI {
 				} while (setAgain != 1 && setAgain != 2); // end dowhile
 			} // end if
 			if (setAgain == 1) {
-				do {
+				do { // Handle which IP address to use
 					try {
 						System.out.println("Would you like to specify an IP address or use the local IP? (1 - specify, 2 - use local)"); // use local for now
 						localOrNot = Integer.parseInt(br.readLine());
@@ -59,17 +60,17 @@ public class ClientUI {
 					catch (NumberFormatException nfe) {} // end catch
 				} while (localOrNot != 1 && localOrNot != 2); // end dowhile
 
-				if (socket == 1 && localOrNot == 1) {
+				if (socket == 1 && localOrNot == 1) { // if normal mode and specify IP selected
 					System.out.println("Enter the IP address of the Server. (i.e. 192.168.100.106)");
 					IP = InetAddress.getByName(br.readLine());
 				} // end if
-				else if (socket == 2 && localOrNot == 1) {
+				else if (socket == 2 && localOrNot == 1) { // if error simulator mode and specify IP selected
 					System.out.println("Enter the IP address of the Error Simulator. (i.e. 192.168.100.106)");
 					IP = InetAddress.getByName(br.readLine());
 				} // end if
 				setAgain = 2;
 			} // end if
-			do {
+			do { // Handle the selection of operation
 				try {
 					System.out.println("Would you like to perform a read or a write? (1 - read, 2 - write)");
 					rw = Integer.parseInt(br.readLine());
@@ -77,7 +78,7 @@ public class ClientUI {
 				catch (NumberFormatException nfe) {} // end catch
 			} while (rw != 1 && rw != 2); // end dowhile
 		
-			if (rw == 1) {
+			if (rw == 1) { // if read request
 				System.out.println("What is the name of the file you wish to read from the server? (i.e. 'Test.txt')");
 				filename = br.readLine();
 				System.out.println("Specify the full path of where you would like to save the file, including the filename (i.e. 'C:\\Users\\Kais\\git\\TFTP\\Test.txt')");
@@ -86,7 +87,7 @@ public class ClientUI {
 				client.start();
 				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
-			else if (rw == 2) {
+			else if (rw == 2) { // if write request
 				System.out.println("What would you like to name the file on the server side? (i.e. 'Test.txt')");
 				filename = br.readLine();
 				System.out.println("Specify the full path of where the file is located. (i.e. 'C:\\Users\\Kais\\git\\TFTP\\Test.txt')");
@@ -95,7 +96,7 @@ public class ClientUI {
 				client.start();
 				while (client.getState() != Thread.State.TERMINATED) {} // end whileloop
 			} // end if
-			try {
+			try { // handle more invocations
 				System.out.println("Would you like to invoke another read or write? (0 - Yes, anything else - No)");
 				exit = Integer.parseInt(br.readLine());
 			} // end try
