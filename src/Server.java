@@ -99,7 +99,6 @@ public class Server extends Thread {
 		
 		int innerzero = 0;
 		boolean found = false;
-		System.out.println(p.getLength());
 		for (int i = 2; i < p.getLength() - 1; i++) {
 			if (data[i] == (byte) 0) {
 				if (!found) {
