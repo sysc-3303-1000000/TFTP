@@ -252,7 +252,7 @@ public class Client extends Thread {
 						return;
 					} // end catch
 					catch (IOException e) { // respond with error packet 0503_0 at this point, then terminate client thread
-						byte emsg[] = ("The file: " + filenameString + "could not be written in the following path: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again, client thread exiting.").getBytes();
+						byte emsg[] = ("The file: " + filenameString + " could not be written in the following path: " + directory + " because the disk where this directory is located is full. Please remove files from the disk to have sufficient room and try again, client thread exiting.").getBytes();
 						try {
 							sendReceiveSocket.send(new DatagramPacket(createErrorMsg(three, emsg), 5 + emsg.length, address, receivePacket.getPort()));
 							System.out.println("Client sent error packet 3 with message: "+ new String(emsg));
@@ -575,18 +575,23 @@ public class Client extends Thread {
 	 * 
 	 * @since May 17 2014
 	 * 
-	 * Latest Change: Added implementation of how stuff is read based on Colin's server code
-	 * @version May 17 2014
+	 * Latest Change: BufferedInputStream closes if there's an exception
+	 * @version June 15 2014
 	 * @author Colin
 	 * 
 	 */
 	private byte[] ReadFromFile(int blockNum) throws FileNotFoundException, IOException
 	{
 
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(directory));
-
+		BufferedInputStream in = null;
+		
 		byte[] data = new byte[512];
 		int i = 0;
+		
+		try{
+			in = new BufferedInputStream(new FileInputStream(directory));
+		
+
 
 		in.skip((blockNum-1)*512);
 
@@ -594,7 +599,11 @@ public class Client extends Thread {
 			in.close();
 			return new byte[0];
 		} // end if
-
+		}
+		catch(Exception e){
+			in.close();
+			throw e;
+		}
 		in.close();
 
 		if (i < 512) // act differently if we've hit the end of the file
@@ -617,16 +626,22 @@ public class Client extends Thread {
 	 * 
 	 * @since May 17 2014
 	 * 
-	 * Latest Change: Changed so user enters the full path of the file to save as
-	 * @version June 14 2014
-	 * @author Kais
+	 * Latest Change: close the FileOutputStream if there's an exception
+	 * @version June 15 2014
+	 * @author Colin
 	 * 
 	 */
 	private void WriteToFile(int blockNum, byte[] writeData) throws FileNotFoundException, IOException
 	{
-		FileOutputStream out = new FileOutputStream(directory, (blockNum > 1) ? true : false);
-		out.write(writeData, 0, writeData.length);
-		out.getFD().sync();
+		FileOutputStream out = null;
+		try{
+			out = new FileOutputStream(directory, (blockNum > 1) ? true : false);
+			out.write(writeData, 0, writeData.length);
+		}
+		catch(Exception e){
+			out.close();
+			throw e;
+		}
 		out.close();
 
 	} // end method
@@ -710,9 +725,9 @@ public class Client extends Thread {
 	 * 
 	 * @since May 30 2014
 	 * 
-	 * Latest Change: Added implementation for this method
-	 * @version June 9 2014
-	 * @author Kais
+	 * Latest Change: Cleaned function
+	 * @version June 12 2014
+	 * @author Colin
 	 */
 	private void printErrorMsg(byte[] errorMsg, int length) {
 		System.out.println("Client has received error packet from server: " + new String(Arrays.copyOfRange(errorMsg, 4, length - 1)));
