@@ -816,7 +816,16 @@ public class Client extends Thread {
 
 		return msg;
 	} // end method
-
+	/**
+	 * Run method for Client
+	 * 
+	 * @since May 11 2014
+	 * 
+	 * Latest Change: Added Implementation
+	 * @version May 15 2014
+	 * @author Kais
+	 * 
+	 */
 	public void run() {
 		sendReceive(req);
 		sendReceiveSocket.close();
