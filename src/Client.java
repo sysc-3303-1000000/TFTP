@@ -596,7 +596,7 @@ public class Client extends Thread {
 		in.skip((blockNum-1)*512);
 
 		if ((i = in.read(data)) == -1){
-			in.close();
+			in.close(); // close the file if error
 			return new byte[0];
 		} // end if
 		}
@@ -635,11 +635,11 @@ public class Client extends Thread {
 	{
 		FileOutputStream out = null;
 		try{
-			out = new FileOutputStream(directory, (blockNum > 1) ? true : false);
+			out = new FileOutputStream(directory, (blockNum > 1) ? true : false); // only over write the first time, append after
 			out.write(writeData, 0, writeData.length);
 		}
 		catch(Exception e){
-			out.close();
+			out.close(); // close the file if exception
 			throw e;
 		}
 		out.close();
@@ -661,8 +661,8 @@ public class Client extends Thread {
 	 */
 	private boolean verifyack(byte[] ackNumber, DatagramPacket p) {
 		byte ack[] = p.getData();
-		if (ack[0] == zero && ack[1] == four) {
-			if (ack[2] == ackNumber[0] && ack[3] == ackNumber[1]) {
+		if (ack[0] == zero && ack[1] == four) { // ACK header verification
+			if (ack[2] == ackNumber[0] && ack[3] == ackNumber[1]) { // make sure it's the right ack
 				return true;
 			} // end if
 		} // end if
@@ -684,8 +684,8 @@ public class Client extends Thread {
 	 */
 	private boolean verifydata(byte[] dataNumber, DatagramPacket p) {
 		byte data[] = p.getData();
-		if (data[0] == zero && data[1] == three) {
-			if (data[2] == dataNumber[0] && data[3] == dataNumber[1]) {
+		if (data[0] == zero && data[1] == three) { // DATA header verification
+			if (data[2] == dataNumber[0] && data[3] == dataNumber[1]) { // make sure it's the right DATA
 				return true;
 			} // end if
 		} // end if
