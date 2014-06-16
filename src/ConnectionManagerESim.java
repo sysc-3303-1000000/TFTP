@@ -10,11 +10,11 @@ import java.util.Arrays;
  * @since May 16 2014
  * 
  * @author Mohammed Ahmed-Muhsin & Samson Truong
- * @version June 6 2014
+ * @version June 14 2014
  *
  */
 public class ConnectionManagerESim extends Thread {
-	public static final int DATA_SIZE = 516;
+	public static final int DATA_SIZE = 516;	// the maximum size of the packet
 	public static final int PERCENTPASS = 9;	//int value 0-10 (0 being 100 fail rate)
 	public static final long TIMEOUT = 3000;	//int value in miliseconds 
 
@@ -22,40 +22,48 @@ public class ConnectionManagerESim extends Thread {
 	private DatagramSocket serverSocket, clientSocket, corruptSocket; // socket deceleration for all three required sockets 
 	private DatagramPacket sendClientPacket, receiveClientPacket, receiveServerPacket, sendServerPacket; // packet deceleration for all packets being sent and received for both client and server
 	private InetAddress clientIP, serverIP;
-	private boolean debug;
-	private boolean verbose;
-	private boolean silent;
-	private int clientPort;
-	private int clientLength;
-	private int serverLength;
+	private boolean debug; // if we are running in debug mode
+	private boolean verbose; // if we are running in verbose 
+	private boolean silent; // if we are running silent mode
+	private int clientPort; // the client port 
+	private int clientLength; // the length of the client message
+	private int serverLength; // the length of the server message
 	private int mode;	// will have the value of the current error simulation mode 
 	private int delay; // will store the amount of delay if we are running in delayed mode
 	private int packetType; // the type of packet we are changing
 	private int packetNumber; // the packet number that we are changing
-	private Request requestType;
-	private boolean lastPacketWrite = false;
-	private boolean lastPacketRead = false;
-	private boolean firstPacket = true;
-	private boolean end = false;
-	private boolean errorReceived = false;
-	private byte clientData[];
+	private Request requestType; // the type of request
+	private boolean lastPacketWrite = false; // if this was the last packet in a write
+	private boolean lastPacketRead = false; // if this was the last packet in a read
+	private boolean firstPacket = true; // if this is the first packet in the transaction
+	private boolean end = false; // if we have reached the end 
+	private boolean errorReceived = false; // if we have received an error packet
+	private byte clientData[]; // the data from the client
 	private byte clientReply[] = new byte[DATA_SIZE]; // this will store the reply from the client
 	private byte serverReply[] = new byte[DATA_SIZE]; // this will store the reply from the server
 	private byte serverData[] = new byte[DATA_SIZE]; // this will store the response from the server
 	private byte trueLastPacket[] = new byte[2]; // will store the block number of the truly last packet to verify if we have received it or not
 	private byte errorCode[] = new byte[2]; // will store the error code number (if applicable)
 	private byte errorMsg[]; // will store the error message
+	
 	/**
 	 * The following is the constructor for ListenerESim
 	 * @param output determines the level of output we want to display
 	 * @param data the message which will be sent to the server
 	 * @param port the port which the message from the server will be sent to
 	 * @param length the length of the data packet
+	 * @param serverIP the Address of the server
+	 * @param clientIP the Address of the client
+	 * @param userChoice which mode to run in
+	 * @param delay the delay between two packets 
+	 * @param packetType what kind of packet type we are working on
+	 * @param packetNumber which packet/block number we want to work on
+	 * @param requestType what type of request it is
 	 * 
 	 * @since May 16 2014
 	 * 
 	 * Latest Change: Improved output
-	 * @version June 12 2014
+	 * @version June 14 2014
 	 * @author Mohammed Ahmed-Muhsin & Samson Truong
 	 * 
 	 */
@@ -148,16 +156,15 @@ public class ConnectionManagerESim extends Thread {
 			System.out.println("\nBlock Number: " + blockNum);
 			System.out.println("\n******************************************************");
 			System.out.println("\n");
-			
-		}
+		} // end if
 		else if (verbose) { // print only relevant information
 			// print out the information on the packet
 			System.out.println("Length of packet: " + p.getLength());
 			System.out.println("Packet Type: " + p.getData()[0] + p.getData()[1]);
 			System.out.println("Block Number: " + blockNum);
-		}
+		} // end else if
 		else if (silent){
-		}
+		}// end else if
 	} // end method
 
 	/**
@@ -174,28 +181,25 @@ public class ConnectionManagerESim extends Thread {
 	public void run() {
 
 		while (!end) {
-			if (mode == 0)
-			{
-				end = normalOp();	//Runs the Error Sim normally (ie. No errors)
+			if (mode == 0) { //Runs the Error Sim normally (ie. No errors)
+				end = normalOp(); 
 			}
-			else if (mode == 1)
-			{
+			else if (mode == 1) { // runs in lost operation
 				end = lostOp();
 			}
-			else if (mode == 2)
-			{
+			else if (mode == 2)	{ // runs in delayed operation
 				end = delayedOp();
 			}
-			else if (mode == 3) {
+			else if (mode == 3) { // runs in duplicate operation
 				end = duplicatedOp();
 			}
-			else if (mode == 4 || mode == 5 || mode == 7) {
+			else if (mode == 4 || mode == 5 || mode == 7) { // runs in corrupted packet operation
 				end = corruptOp();
 			}
-			else if (mode == 6) {
+			else if (mode == 6) { // runs in a corrupted file operation
 				end = corruptMode();
 			}
-			else if (mode == 8) {
+			else if (mode == 8) { // runs in an invalid TID mode
 				// check if we are changing the TID of the first DATA packet in a read
 				if (requestType == Request.READ && packetType == 3 && packetNumber == 1) { // we CANNOT change this as there is no way to know the correct TID
 					System.out.println("ConnectionManagerESim: You cannot change the TID for a READ and the first DATA packet as there is no way to validate");
@@ -249,8 +253,7 @@ public class ConnectionManagerESim extends Thread {
 	 * @version June 12 2014
 	 * @author Samson Truong & Mohammed Ahmed-Muhsin 
 	 */
-	private boolean normalOp() 
-	{
+	private boolean normalOp() 	{
 
 		if (debug)
 			System.out.println("ConnectionManagerESim: Running Normal Operation\n");
@@ -258,7 +261,6 @@ public class ConnectionManagerESim extends Thread {
 		// this is not the first packet, we need to wait for the client to send back to us
 		if (!firstPacket) {
 			clientReceive();
-
 		}//end if
 
 		serverSend();

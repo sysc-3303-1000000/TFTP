@@ -4,16 +4,12 @@ import java.util.Scanner;
 
 /**
  * The following is implementation for the ErrorSim
- * For this implementation, the ErrorSim will simulate three types of errors: 
- * 1) Lost packet
- * 2) Delayed packet
- * 3) Duplicate packet
- * 
- * There will also be a user interface to get options to run in Normal mode, any of the errors above, or to shut down the simulation
- * @since May 11 2014
+ * The error simulator is responsible for selecting the different modes including a normal mode or changing packets, corrupting, etc.
+ * You need to have one ErrorSim running per unique client if you want to simulate different things as the operation 
+ * will need to be reset each time. 
  * 
  * @author Mohammed Ahmed-Muhsin & Samson Truong
- * @version June 12 2014
+ * @version June 14 2014
  *
  */
 public class ErrorSim {
@@ -39,18 +35,19 @@ public class ErrorSim {
 	private InetAddress clientIP;
 	
 	/**
-	 * 	Will determine the user input based on an integer value
-	 * 0 Normal packets
-	 * 1 Lost packet
-	 * 2 Delayed packet
-	 * 3 Duplicate packet
-	 * 4 Invalid packet type
-	 * 5 Invalid block number
-	 * 6 Invalid file mode
-	 * 7 Invalid TID
-	 * 9 Shutdown Listener
-	 * 10 Set the output level
-	 * 11 - Set the IP
+	 * Will determine the user input based on an integer value
+	 * 0 - Normal
+	 * 1 - Lose a packet
+	 * 2 - Delay a packet
+	 * 3 - Duplicate
+	 * 4 - Invalid packet type
+	 * 5 - Invalid block number
+	 * 6 - Invalid file mode
+	 * 7 - Invalid packet size
+	 * 8 - Invalid TID
+	 * 9 - Shutdown
+	 * 10 - Set output level
+	 * 11 - Set IP Address
 	 */
 	private static int userChoice;
 	
@@ -67,7 +64,7 @@ public class ErrorSim {
 			}
 		}
 		else {
-			System.out.println("Server IP enterred: " + ip.toString());
+			System.out.println("Server IP being used: " + ip.toString());
 			serverIP = ip;
 		}
 		this.output = output; // initialize the level of output to medium by default
