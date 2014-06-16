@@ -10,7 +10,7 @@ import java.net.InetAddress;
  *
  */
 public class ClientUI {
-	
+
 	/**
 	 * Main method for the Client User Interface
 	 * @param args not used
@@ -77,7 +77,7 @@ public class ClientUI {
 				} // end try
 				catch (NumberFormatException nfe) {} // end catch
 			} while (rw != 1 && rw != 2); // end dowhile
-		
+
 			if (rw == 1) { // if read request
 				System.out.println("What is the name of the file you wish to read from the server? (i.e. 'Test.txt')");
 				filename = br.readLine();

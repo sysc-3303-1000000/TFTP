@@ -100,11 +100,11 @@ public class Client extends Thread {
 				return;
 			} // end if
 		} // end if
-		
+
 		sendPacket = new DatagramPacket(message, message.length, address, socket);
 
 		System.out.println("Client sending " + req.toString() + " request to server");
-		
+
 		// send the packet to the error simulator or server via the send socket 
 		try {
 			sendReceiveSocket.send(sendPacket);
@@ -125,7 +125,7 @@ public class Client extends Thread {
 		boolean worked = false; // set to false since receiving a packet hasn't worked yet
 		int numberOfTimeouts = 0; // no timeouts have occurred yet
 		while (!worked) {
-			
+
 			try {
 				worked = true; // set worked to true, will be set back to false in cases where we didn't receive a packet
 				System.out.println("Client receiving packet from server");
@@ -140,22 +140,22 @@ public class Client extends Thread {
 				System.err.println("IO Exception error: " + ioe.getMessage());
 				worked = false; // did not work
 			} // end catch
-			
+
 			if (numberOfTimeouts == 5) { // we give up after timing out 5 times
 				System.out.println("Client has timed out 5 times waiting for the first packet back from server, assuming the server is dead and exiting.");
 				return;
 			} // end if
-			
+
 		} // end whileloop
-		
+
 		System.out.println("Client has received a packet from server");
-		
+
 		/* Handle receiving an error packet */
 		if (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five) {
 			printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 			return;
 		} // end if
-		
+
 		threadPort = receivePacket.getPort();
 		threadAddress = receivePacket.getAddress();
 		if (req == Request.READ) { // if request was a read
@@ -164,9 +164,9 @@ public class Client extends Thread {
 			dataNumber[0] = (byte)0;
 			dataNumber[1] = (byte)1;
 			blockNum = 1;
-			
+
 			while(true) {
-				
+
 				/* Handle receiving a DATA packet instead of an ACK packet */
 				if (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == four) {
 					byte emsg[] = ("The last TFTP packet received was an ACK packet when it should have been a DATA packet during a read request, client thread is exiting.").getBytes();
@@ -182,7 +182,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				
+
 				/* Handle receiving a packet which is not a DATA, ACK, or ERROR */
 				else if (receivePacket.getData()[0] != zero || receivePacket.getData()[1] != three) {
 					byte emsg[] = ("Client has received an unidentified packet type during a read request, client thread is exiting.").getBytes();
@@ -198,7 +198,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				
+
 				/* Handle receiving a block number that doesn't make sense at this point in the operation */
 				if ((receivePacket.getData()[2] != dataNumber[0] && receivePacket.getData()[2] != dataNumber[0] - one) || (receivePacket.getData()[3] != dataNumber[1] && receivePacket.getData()[3] != dataNumber[1] - one)) {
 					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process for a read request, client thread is exiting").getBytes();
@@ -214,7 +214,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				
+
 				/* Handle receiving a packet with an invalid size  */
 				if (receivePacket.getLength() > 516 || receivePacket.getLength() < 4) {
 					byte emsg[] = ("The data packet client received has an invalid size, client thread terminating").getBytes();
@@ -230,7 +230,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				
+
 				/* Check to see if the block number matches up */
 				if (verifydata(dataNumber, receivePacket)) {
 					System.out.println("Client has received DATA packet " + blockNum + " from the server.");
@@ -266,7 +266,7 @@ public class Client extends Thread {
 						return;
 					} // end catch
 				} // end if
-				
+
 				else {
 					dataNumber[1]--;
 					if(dataNumber[1] == 255) {
@@ -280,11 +280,11 @@ public class Client extends Thread {
 				ack[1] = (byte)4;
 				ack[2] = (byte)((blockNum - (blockNum % 256))/256);
 				ack[3] = (byte)(blockNum % 256);
-				
+
 				sendData = new DatagramPacket(ack, 4, address, receivePacket.getPort());
-				
+
 				System.out.println("Client sending ACK packet "+ blockNum + " to the server.");
-				
+
 				worked = false;
 				numberOfTimeouts = 0;
 				try {
@@ -294,7 +294,7 @@ public class Client extends Thread {
 					System.err.println("Unknown IO exception error: " + ioe.getMessage());
 				} // end catch
 				System.out.println("Client sent ACK packet "+ blockNum + " to the server.");
-				
+
 				if (receivePacket.getLength() < 516) {
 					System.out.println("Client has received last packet from the server during a read request");
 					break;
@@ -316,17 +316,17 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
-					
+
 					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) { // if we get an ERROR packet
 						printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 						return;
 					} // end if
-					
+
 					if (numberOfTimeouts == 5) { // if we timeout 5 times
 						System.out.println("Client has timed out 5 times waiting for the next data packet from server during a read request, server is assumed dead, client thread exiting.");
 						return;
 					} // end if
-					
+
 					if ((receivePacket.getPort() != threadPort || !receivePacket.getAddress().equals(threadAddress)) && worked) { // if we receive a packet from a different TID
 						byte emsg[] = ("Packet received from invalid source").getBytes();
 						try {
@@ -342,32 +342,32 @@ public class Client extends Thread {
 						} // end catch
 						worked = false;
 					} // end if
-					
+
 					if (worked) {
 						dat = rly; // new dat will be the data from the packet just received
 					} // end if
-					
+
 				} // end whileloop
-				
+
 				/* increment values required */
 				dataNumber[1]++;
 				if(dataNumber[1] == 0) {
 					dataNumber[0]++;
 				} // end if
 				blockNum++; // next block
-				
+
 			} // end whileloop
-			
+
 		} // end if
-		
+
 		else if (req == Request.WRITE) { // if request was a write
-			
+
 			ackNumber[0] = (byte)0;
 			ackNumber[1] = (byte)0;
 			blockNum = 1;
-			
+
 			while(true) {
-				
+
 				/* Handle what happens when we get a DATA packet instead of an ACK packet */
 				if (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == three) {
 					byte emsg[] = ("The last TFTP packet received was a DATA packet when it should have been an ACK packet during a write request, client thread is exiting").getBytes();
@@ -383,7 +383,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				
+
 				/* Handle what happens when packet isn't a DATA, ACK, or ERROR packet */
 				else if (receivePacket.getData()[0] != zero || receivePacket.getData()[1] != four) {
 					byte emsg[] = ("Client has received an unidentified packet type during a write request, client thread is exiting").getBytes();
@@ -399,7 +399,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				}
-				
+
 				/* Handle receiving a block number that doesn't make sense at this point in the operation */
 				if ((receivePacket.getData()[2] != ackNumber[0] && receivePacket.getData()[2] != ackNumber[0] - one) || (receivePacket.getData()[3] != ackNumber[1] && receivePacket.getData()[3] != ackNumber[1] - one)) {
 					byte emsg[] = ("The last TFTP packet received has a block number that doesn't make sense at this point in the transfer process during a write request, client thread is exiting").getBytes();
@@ -415,7 +415,7 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				
+
 				/* Handle what happens when we receive an ACK packet with an incorrect size */
 				if (receivePacket.getLength() > 4 || receivePacket.getLength() < 4) {
 					byte emsg[] = ("The ack packet client received has an invalid size, which should not be, client thread terminating").getBytes();
@@ -431,9 +431,9 @@ public class Client extends Thread {
 					} // end catch
 					return;
 				} // end if
-				
+
 				byte[] fileData = new byte[0];
-				
+
 				/* If we received the correct packet */
 				if (verifyack(ackNumber, receivePacket)) {
 					System.out.println("Client has received ACK packet " + blockNum + " from the server.");
@@ -473,7 +473,7 @@ public class Client extends Thread {
 					System.arraycopy(fileData, 0, data, 4, fileData.length);
 					sendData = new DatagramPacket(data, fileData.length + 4, address, receivePacket.getPort());
 				} // end if
-				
+
 				/* We received the last packet again */
 				else {
 					ackNumber[1]--;
@@ -482,7 +482,7 @@ public class Client extends Thread {
 					}
 					blockNum--;
 				} // end else
-				
+
 				worked = false;
 				numberOfTimeouts = 0;
 
@@ -495,7 +495,7 @@ public class Client extends Thread {
 						System.err.println("Unknown IO exception error: " + ioe.getMessage());
 					} // end catch
 					System.out.println("Client sent DATA packet " + blockNum + " to the server.");
-					
+
 					byte reply[] = new byte[DATA_SIZE];
 					receivePacket = new DatagramPacket(reply, reply.length);
 
@@ -513,16 +513,16 @@ public class Client extends Thread {
 						System.err.println("IO Exception error: " + ioe.getMessage());
 						worked = false;
 					} // end catch
-					
+
 					if (worked && (receivePacket.getData()[0] == zero && receivePacket.getData()[1] == five)) { // handle ERROR packet being received
 						printErrorMsg(receivePacket.getData(), receivePacket.getLength());
 						return;
 					} // end if
-					
+
 					if (worked && receivePacket.getLength() != 4 && endFile) {
 						System.out.println("We got an incorrect packet as our last packet for write, but connection has been dropped due to sending last data packet, so not sending error packet 4.");
 					} // end if
-					
+
 					if ((receivePacket.getPort() != threadPort || !receivePacket.getAddress().equals(threadAddress)) && worked) { // handle receiving from the wrong TID
 						byte emsg[] = ("Packet received from invalid source").getBytes();
 						try {
@@ -538,23 +538,23 @@ public class Client extends Thread {
 						} // end catch
 						worked = false;
 					} // end if
-					
+
 					else if(worked) {
 						receivePacket.setData(Arrays.copyOfRange(reply, 0, receivePacket.getLength()));
 					} // end if
-					
+
 					if (numberOfTimeouts == 5) {
 						System.out.println("Client has timed out 5 times waiting for the next ack packet from server, server assumed dead, client thread terminating");
 						return;
 					} // end if
-					
+
 					if (endFile && worked) { // breaks if endfile and the it received a response
 						System.out.println("Client has received last packet from the server during a write request");
 						return;
 					} // end if
-					
+
 				} // end whileloop
-				
+
 				ackNumber[1]++;
 				if(ackNumber[1] == 0) {
 					ackNumber[0]++;
@@ -584,21 +584,21 @@ public class Client extends Thread {
 	{
 
 		BufferedInputStream in = null;
-		
+
 		byte[] data = new byte[512];
 		int i = 0;
-		
+
 		try{
 			in = new BufferedInputStream(new FileInputStream(directory));
-		
 
 
-		in.skip((blockNum-1)*512);
 
-		if ((i = in.read(data)) == -1){
-			in.close(); // close the file if error
-			return new byte[0];
-		} // end if
+			in.skip((blockNum-1)*512);
+
+			if ((i = in.read(data)) == -1){
+				in.close(); // close the file if error
+				return new byte[0];
+			} // end if
 		}
 		catch(Exception e){
 			in.close();
