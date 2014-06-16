@@ -4,12 +4,15 @@
   ___) || |  ___) | |___   ___) |__) | |_| |__) |
  |____/ |_| |____/ \____| |____/____/ \___/____/ 
                                                  
-= ITERATION 2 = 
+= ITERATION 5 = 
 Colin Kealty: 100855810
 Kais Hassanali: 100861319
 Mohammed Ahmed-Muhsin: 100855437
 Samson Truong: 100848346
-Last updated: 7:30 - 2014-05-17
+Git Repository: https://github.com/sysc-3303-1000000/TFTP.git
+Last updated: 12:33 - 2014-06-16
 
 Please see README.docx
-Please see Iteration 2 Diagrams.pdf for the diagrams of this iteration
+Please see Diagrams.pdf for all the UCM diagrams and timing diagrams
+Please see TFTPClassDiagram.jpg for the class diagram
+Please see the TestReport.pdf for all testing results done in the program
