@@ -2,8 +2,30 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+/**
+ * The following is implementation for the Server UI
+ * 
+ * @since June 10 2014
+ * 
+ * @author Colin
+ */
 public class ServerUI {
 
+	
+	/**
+	 * Main method for the Server User Interface
+	 * @param args not used
+	 * 
+	 * @throws IOException if invalid input
+	 * @throws NumberFormatException if not a number is given
+	 * 
+	 * @since June 10 2014
+	 * 
+	 * Latest Change: Added ability to interrupt server
+	 * @version June 14 2014
+	 * @author Colin
+	 * 
+	 */
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		BufferedReader br = new BufferedReader( new InputStreamReader(System.in));
 		int exit = 0;

@@ -20,12 +20,13 @@ public class Server extends Thread {
 	private static String fileName;
 	private volatile boolean interrupted = false;
 	private static String mode;
+	
 	/**
 	 * The following is the constructor for Server
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Removed everything, not needed
+	 * Latest Change: Removed everything not needed
 	 * @version May 17 2014
 	 * @author Kais
 	 * 
@@ -75,14 +76,15 @@ public class Server extends Thread {
 	 * 
 	 * @since May 13 2014
 	 * 
-	 * Latest Change: No more ack or data stuff
-	 * @version May 22 2014
-	 * @author Kais
+	 * Latest Change: Send address
+	 * @version June 15
+	 * @author Colin
 	 * 
 	 */
 	private void verify(DatagramPacket p) {  
 		Request r = null;
 		boolean invalid = false;
+		//check data from datagrampacket for validity and request type
 		if(p.getData()[0] != (byte)0)
 			invalid = true;
 		else if(p.getData()[1] == (byte)5) {
@@ -99,6 +101,7 @@ public class Server extends Thread {
 		
 		int innerzero = 0;
 		boolean found = false;
+		//parse the request
 		for (int i = 2; i < p.getLength() - 1; i++) {
 			if (data[i] == (byte) 0) {
 				if (!found) {
@@ -111,11 +114,11 @@ public class Server extends Thread {
 			}
 		}
 		
-		if(invalid)
+		if(invalid)	//if invalid read or write
 		{
 			byte emsg[] = ("Server has received an invalid Read or Write request").getBytes();
 			try {
-				receive.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, p.getAddress(), p.getPort()));
+				receive.send(new DatagramPacket(createErrorMessage((byte)4, emsg), 5 + emsg.length, p.getAddress(), p.getPort()));	//send error
 				System.out.println("Server sent error packet 4 with message: " + new String(emsg));
 			} // end try
 			catch (IOException e1) {
@@ -125,18 +128,24 @@ public class Server extends Thread {
 		}
 		
 		byte[] fileNameByteArray = new byte[innerzero-2];
-		System.arraycopy(data, 2, fileNameByteArray, 0, innerzero-2);
+		System.arraycopy(data, 2, fileNameByteArray, 0, innerzero-2);	//copy name of file
 		fileName = new String(fileNameByteArray);
-		byte[] modeArray = new byte[p.getLength() - innerzero - 2];
+		byte[] modeArray = new byte[p.getLength() - innerzero - 2];		//copy mode of file
 		System.arraycopy(data, innerzero + 1, modeArray, 0, p.getLength() - innerzero - 2);
 		mode = new String(modeArray);
 
-		Thread newConnectionThread = new ConnectionManager(p.getPort(), r, fileName, mode, p.getAddress());
+		Thread newConnectionThread = new ConnectionManager(p.getPort(), r, fileName, mode, p.getAddress());	//create new connection manager thread
 		newConnectionThread.start();
 	} // end method
 
 	/**
-	 * 
+	 *  This method receives new requests from client
+	 *  
+	 *  @since May 13 2014
+	 *  
+	 *  Latest Change: add interrupted catch
+	 *  @version June 12 2014
+	 *  @author Colin
 	 */
 	public void sendReceive() {
 
@@ -157,6 +166,18 @@ public class Server extends Thread {
 
 	}
 	
+	/**
+	 * Following method will create an error message which will be put into a packet and sent to the server
+	 * @param type the type of error we have encountered on the client side
+	 * @param errorMsg the corresponding error message for the type of error
+	 * @return the message which will be put into a packet and sent to the server
+	 * 
+	 * @since May 30 2014
+	 * 
+	 * Latest Change: Cleaned function
+	 * @version May 31 2014
+	 * @author Colin
+	 */
 	private byte[] createErrorMessage(byte type, byte errorMessage[]){
 		byte msg[] = new byte[errorMessage.length + 5];
 		
@@ -176,15 +197,16 @@ public class Server extends Thread {
 		interrupted = true;
 		receive.close();
 	}
+	
 	/**
 	 * Main method for the Server
 	 * @param args not used
 	 * 
 	 * @since May 11 2014
 	 * 
-	 * Latest Change: Changed to run all listener code in server
+	 * Latest Change: Added intteruptability
 	 * @version May 17 2014
-	 * @author Kais
+	 * @author Colin
 	 * 
 	 */
 	public void run() {
