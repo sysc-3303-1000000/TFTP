@@ -249,9 +249,6 @@ public class ErrorSim {
 			if (packetType == 3 || packetType == 4){
 				System.out.println("Which packet do you want to corrupt: ");
 				packetNumber = input.nextInt();
-				if (packetType == 3 && packetNumber == 1) {
-					System.out.println("There will be an issue if you are doing a READ request!");
-				}// end if
 			}
 			// otherwise we are changing the RRQ and WRQ so the packet number that we are changing is 1
 			else {
